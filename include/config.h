@@ -1,5 +1,5 @@
 /*
- * config.h - Configuration and Pin Definitions
+ * config.h - Configuration and Pin Definitions - IMPROVED VERSION
  */
 
 #ifndef CONFIG_H
@@ -27,6 +27,9 @@
 #define INDEX_E            10
 #define INDEX_A            11
 
+// Emergency Stop Pin (active low with internal pullup)
+#define EMERGENCY_STOP_PIN 15
+
 // GPS Serial (UART1)
 #define GPS_RX             17
 #define GPS_TX             16
@@ -36,7 +39,7 @@
 #define TFT_MISO           16  // GP16 Pin 21 (SPI RX)
 #define TFT_SCK            18  // GP18 Pin 24 (SPI SCK)
 #define TFT_CS             17  // GP17 Pin 22 (Chip Select)
-#define TFT_DC             14  // GP14 (Data/Command) - MOVED from GP20 to avoid conflict
+#define TFT_DC             14  // GP14 (Data/Command)
 
 // FT6206 Capacitive Touch (I2C)
 #define TOUCH_SDA          4   // GP4 Pin 6 (I2C SDA)
@@ -113,7 +116,7 @@
 #define TRACKING_UPDATE_MS ((unsigned long)(CONTROL_LOOP_DT * 1000))
 #define DISPLAY_UPDATE_MS 500
 
-// Safety Limits
+// Safety Limits (with 5 degree margin for detection)
 #define MAX_ELEVATION 90.0
 #define MIN_ELEVATION 0.0
 
@@ -127,5 +130,8 @@
 // PWM Configuration
 #define PWM_FREQUENCY 20000
 #define PWM_RESOLUTION 8
+
+// GPS Configuration
+#define GPS_TIMEOUT_MS 10000  // 10 seconds without valid fix
 
 #endif // CONFIG_H

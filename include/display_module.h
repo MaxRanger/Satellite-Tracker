@@ -1,6 +1,7 @@
 /*
  * display_module.h - Adafruit 2.8" TFT display (PID 2423) interface
  * ILI9341 TFT driver with FT6206 capacitive touch
+ * UPDATED WITH SETTINGS SCREEN
  */
 
 #ifndef DISPLAY_MODULE_H
@@ -29,7 +30,10 @@
 #define TAG_EL_DOWN     14
 #define TAG_SETUP_CONNECT  15
 #define TAG_SETUP_SKIP     16
-#define TAG_KEYBOARD       17
+#define TAG_WIFI_CONFIG    17
+#define TAG_COMPASS_CAL    18
+#define TAG_COMPASS_TEST   19
+#define TAG_KEYBOARD       20
 #define TAG_KB_CHAR_START  100  // 100-199 for keyboard characters
 #define TAG_KB_BACKSPACE   200
 #define TAG_KB_SPACE       201
@@ -62,6 +66,7 @@ void handleDisplayTouch();
 // Screen drawing functions
 void drawSetupScreen();
 void drawMainScreen();
+void drawSettingsScreen();
 void drawManualControlScreen();
 
 // Button structure
@@ -72,5 +77,8 @@ struct Button {
   uint16_t color;
 };
 
-#endif // DISPLAY_MODULE_H
+// Compass calibration state (accessed by main loop)
+extern bool compassCalibrating;
+extern unsigned long calibrationStartTime;
 
+#endif // DISPLAY_MODULE_H

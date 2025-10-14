@@ -1,5 +1,5 @@
 // ============================================================================
-// web_interface.cpp
+// web_interface.cpp - IMPROVED VERSION
 // ============================================================================
 
 #include "web_interface.h"
@@ -18,17 +18,43 @@ extern bool wifiConfigured;
 
 WebServer server(80);
 
+// Authentication credentials (TODO: Move to EEPROM/config)
+const char* www_username = "admin";
+const char* www_password = "changeme";  // Change this!
+
+// HTML sanitization to prevent XSS
+String sanitizeHTML(const String& input) {
+  String output = input;
+  output.replace("&", "&amp;");
+  output.replace("<", "&lt;");
+  output.replace(">", "&gt;");
+  output.replace("\"", "&quot;");
+  output.replace("'", "&#39;");
+  return output;
+}
+
 void handleRoot() {
+  // Require authentication
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
+  }
+  
   float currentEl = motorPos.elevation * DEGREES_PER_PULSE;
   float currentAz = motorPos.azimuth * DEGREES_PER_PULSE;
   while (currentAz < 0) currentAz += 360.0;
   while (currentAz >= 360) currentAz -= 360.0;
   
+  // Sanitize user-provided data
+  String safeSatName = sanitizeHTML(String(satelliteName));
+  String safeTLE1 = sanitizeHTML(String(tleLine1));
+  String safeTLE2 = sanitizeHTML(String(tleLine2));
+  
   String html = "<!DOCTYPE html><html><head><title>Sat Tracker</title>";
   html += "<meta http-equiv='refresh' content='2'>";
+  html += "<meta charset='UTF-8'>";
   html += "<style>body{font-family:Arial;margin:20px;}";
   html += "table{border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}";
-  html += "input[type=text]{width:500px;}</style></head><body>";
+  html += "input[type=text]{width:500px;max-width:100%;}</style></head><body>";
   html += "<h1>Satellite Tracker Control</h1>";
   
   html += "<h2>Status</h2><table>";
@@ -52,9 +78,9 @@ void handleRoot() {
   
   html += "<h2>Commands</h2>";
   html += "<form action='/tle' method='POST'>";
-  html += "Satellite Name: <input type='text' name='name' value='" + String(satelliteName) + "'><br><br>";
-  html += "TLE Line 1: <input type='text' name='line1' value='" + String(tleLine1) + "'><br><br>";
-  html += "TLE Line 2: <input type='text' name='line2' value='" + String(tleLine2) + "'><br><br>";
+  html += "Satellite Name: <input type='text' name='name' value='" + safeSatName + "' maxlength='24'><br><br>";
+  html += "TLE Line 1: <input type='text' name='line1' value='" + safeTLE1 + "' maxlength='69'><br><br>";
+  html += "TLE Line 2: <input type='text' name='line2' value='" + safeTLE2 + "' maxlength='69'><br><br>";
   html += "<input type='submit' value='Update TLE and Track'></form><br>";
   
   html += "<form action='/home' method='POST'>";
@@ -69,28 +95,67 @@ void handleRoot() {
 }
 
 void handleTLE() {
-  if (server.hasArg("name") && server.hasArg("line1") && server.hasArg("line2")) {
-    String name = server.arg("name");
-    String line1 = server.arg("line1");
-    String line2 = server.arg("line2");
-    
-    if (line1.length() == 69 && line2.length() == 69) {
-      name.toCharArray(satelliteName, 25);
-      line1.toCharArray(tleLine1, 70);
-      line2.toCharArray(tleLine2, 70);
-      tleUpdatePending = true;
-      
-      server.send(200, "text/plain", "TLE updated - Core 1 will initialize tracking");
-      Serial.println("TLE received, signaling Core 1");
-    } else {
-      server.send(400, "text/plain", "Invalid TLE format (lines must be 69 chars)");
-    }
-  } else {
-    server.send(400, "text/plain", "Missing parameters");
+  // Require authentication
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
   }
+  
+  if (!server.hasArg("name") || !server.hasArg("line1") || !server.hasArg("line2")) {
+    server.send(400, "text/plain", "Missing parameters");
+    return;
+  }
+  
+  String name = server.arg("name");
+  String line1 = server.arg("line1");
+  String line2 = server.arg("line2");
+  
+  // Input validation - length checks
+  if (name.length() == 0 || name.length() >= sizeof(satelliteName)) {
+    server.send(400, "text/plain", "Invalid satellite name (max 24 chars)");
+    return;
+  }
+  
+  if (line1.length() != 69 || line2.length() != 69) {
+    server.send(400, "text/plain", "Invalid TLE format (lines must be 69 chars)");
+    return;
+  }
+  
+  // Basic TLE format validation
+  if (line1[0] != '1' || line2[0] != '2') {
+    server.send(400, "text/plain", "Invalid TLE format (must start with '1' and '2')");
+    return;
+  }
+  
+  // Safe copy with bounds checking and null termination
+  memset(satelliteName, 0, sizeof(satelliteName));
+  strncpy(satelliteName, name.c_str(), sizeof(satelliteName) - 1);
+  satelliteName[sizeof(satelliteName) - 1] = '\0';
+  
+  memset(tleLine1, 0, sizeof(tleLine1));
+  strncpy(tleLine1, line1.c_str(), sizeof(tleLine1) - 1);
+  tleLine1[sizeof(tleLine1) - 1] = '\0';
+  
+  memset(tleLine2, 0, sizeof(tleLine2));
+  strncpy(tleLine2, line2.c_str(), sizeof(tleLine2) - 1);
+  tleLine2[sizeof(tleLine2) - 1] = '\0';
+  
+  // Memory barrier to ensure all writes complete before setting flag
+  // This prevents Core 1 from seeing tleUpdatePending=true before
+  // the TLE data is fully written
+  __dmb();
+  
+  tleUpdatePending = true;
+  
+  server.send(200, "text/plain", "TLE updated - Core 1 will initialize tracking");
+  Serial.println("TLE received, signaling Core 1");
 }
 
 void handleHome() {
+  // Require authentication
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
+  }
+  
   trackerState.tracking = false;
   targetPos.elevation = 0.0;
   targetPos.azimuth = 0.0;
@@ -100,6 +165,11 @@ void handleHome() {
 }
 
 void handleStop() {
+  // Require authentication
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
+  }
+  
   trackerState.tracking = false;
   stopAllMotors();
   server.send(200, "text/plain", "Tracking stopped");
@@ -134,10 +204,12 @@ void initWebInterface() {
     Serial.println("\nWiFi connected!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+    Serial.println("Default credentials: admin / changeme");
+    Serial.println("CHANGE THE PASSWORD!");
   } else {
     Serial.println("\nWiFi connection failed");
     Serial.println("Check credentials on display setup screen");
-    wifiConfigured = false;  // Mark as failed so user can reconfigure
+    wifiConfigured = false;
     return;
   }
   
