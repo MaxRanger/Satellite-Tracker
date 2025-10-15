@@ -10,6 +10,14 @@ QMC5883LCompass compass;
 float magOffset[3] = {0, 0, 0};
 float magScale[3] = {1, 1, 1};
 
+// Background calibration state
+static bool backgroundCalActive = false;
+static unsigned long calStartTime = 0;
+static int calMinX = 32767, calMaxX = -32768;
+static int calMinY = 32767, calMaxY = -32768;
+static int calMinZ = 32767, calMaxZ = -32768;
+static bool calInitialized = false;
+
 QMC5883LCompass& getCompass() {
   return compass;
 }
@@ -27,7 +35,7 @@ void initCompass() {
   compass.setCalibration(-1642, 1694, -2084, 1567, -2073, 1556);
   
   Serial.println("Compass initialized (shared I2C bus with touch)");
-  Serial.println("Run calibrateCompass() for accurate readings");
+  Serial.println("Run calibrateCompass() or use Settings screen for calibration");
 }
 
 void setCompassCalibration(int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
@@ -82,6 +90,131 @@ float readCompassHeading() {
   
   return heading;
 }
+
+// ============================================================================
+// BACKGROUND CALIBRATION API
+// ============================================================================
+
+void startBackgroundCalibration() {
+  if (backgroundCalActive) {
+    Serial.println("Calibration already in progress");
+    return;
+  }
+  
+  Serial.println("Starting background compass calibration");
+  Serial.println("Rotate device through all orientations");
+  
+  backgroundCalActive = true;
+  calStartTime = millis();
+  calInitialized = false;
+  
+  // Reset min/max values
+  calMinX = 32767;
+  calMaxX = -32768;
+  calMinY = 32767;
+  calMaxY = -32768;
+  calMinZ = 32767;
+  calMaxZ = -32768;
+}
+
+void stopBackgroundCalibration() {
+  if (!backgroundCalActive) {
+    Serial.println("No calibration in progress");
+    return;
+  }
+  
+  backgroundCalActive = false;
+  
+  unsigned long calibrationDuration = millis() - calStartTime;
+  
+  // Validate calibration
+  int rangeX = calMaxX - calMinX;
+  int rangeY = calMaxY - calMinY;
+  int rangeZ = calMaxZ - calMinZ;
+  
+  Serial.println("\n=== Compass Calibration Complete ===");
+  Serial.printf("Duration: %lu seconds\n", calibrationDuration / 1000);
+  
+  if (calibrationDuration < 15000) {
+    Serial.println("WARNING: Calibration too short (< 15s)");
+  }
+  
+  if (rangeX < 100 || rangeY < 100 || rangeZ < 100) {
+    Serial.println("WARNING: Insufficient rotation detected!");
+    Serial.println("Some axes have limited range.");
+  }
+  
+  // Apply calibration
+  setCompassCalibration(calMinX, calMaxX, calMinY, calMaxY, calMinZ, calMaxZ);
+  
+  Serial.println("Calibration Values:");
+  Serial.printf("X: [%d, %d] range=%d\n", calMinX, calMaxX, rangeX);
+  Serial.printf("Y: [%d, %d] range=%d\n", calMinY, calMaxY, rangeY);
+  Serial.printf("Z: [%d, %d] range=%d\n", calMinZ, calMaxZ, rangeZ);
+  Serial.println("\nAdd to initCompass() for permanent calibration:");
+  Serial.printf("compass.setCalibration(%d, %d, %d, %d, %d, %d);\n",
+                calMinX, calMaxX, calMinY, calMaxY, calMinZ, calMaxZ);
+  
+  calInitialized = false;
+}
+
+bool isBackgroundCalibrationActive() {
+  return backgroundCalActive;
+}
+
+unsigned long getCalibrationDuration() {
+  if (!backgroundCalActive) return 0;
+  return (millis() - calStartTime) / 1000;
+}
+
+void updateBackgroundCalibration() {
+  if (!backgroundCalActive) {
+    return;
+  }
+  
+  // Initialize on first call
+  if (!calInitialized) {
+    calMinX = 32767;
+    calMaxX = -32768;
+    calMinY = 32767;
+    calMaxY = -32768;
+    calMinZ = 32767;
+    calMaxZ = -32768;
+    calInitialized = true;
+  }
+  
+  // Collect compass data
+  compass.read();
+  
+  int x = compass.getX();
+  int y = compass.getY();
+  int z = compass.getZ();
+  
+  // Update min/max values
+  calMinX = min(calMinX, x);
+  calMaxX = max(calMaxX, x);
+  calMinY = min(calMinY, y);
+  calMaxY = max(calMaxY, y);
+  calMinZ = min(calMinZ, z);
+  calMaxZ = max(calMaxZ, z);
+  
+  // Print progress every 2 seconds
+  static unsigned long lastPrint = 0;
+  if (millis() - lastPrint >= 2000) {
+    unsigned long elapsed = (millis() - calStartTime) / 1000;
+    int rangeX = calMaxX - calMinX;
+    int rangeY = calMaxY - calMinY;
+    int rangeZ = calMaxZ - calMinZ;
+    
+    Serial.printf("Calibration: %lus  X:%d Y:%d Z:%d\n", 
+                  elapsed, rangeX, rangeY, rangeZ);
+    lastPrint = millis();
+  }
+}
+
+// ============================================================================
+// BLOCKING CALIBRATION (for advanced users via serial)
+// ============================================================================
 
 void calibrateCompass() {
   Serial.println("\n=== COMPASS CALIBRATION ===");

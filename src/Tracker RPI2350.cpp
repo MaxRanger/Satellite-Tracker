@@ -1,6 +1,5 @@
 /*
  * Raspberry Pi Pico 2 (RP2350) Satellite Tracker - Main Program
- * WITH BACKGROUND COMPASS CALIBRATION
  */
 
 #include <Arduino.h>
@@ -24,16 +23,6 @@ bool ledState = false;
 // Compass calibration state (shared with display module)
 extern bool compassCalibrating;
 extern unsigned long calibrationStartTime;
-
-// Compass calibration data collection
-struct CompassCalData {
-  int minX, maxX;
-  int minY, maxY;
-  int minZ, maxZ;
-  bool initialized;
-};
-
-CompassCalData calData = {32767, -32768, 32767, -32768, 32767, -32768, false};
 
 void updateLED() {
   unsigned long now = millis();
@@ -65,96 +54,6 @@ void updateLED() {
   }
 }
 
-void handleCompassCalibration() {
-  if (!compassCalibrating) {
-    // Reset calibration data when not calibrating
-    if (calData.initialized) {
-      calData.initialized = false;
-    }
-    return;
-  }
-  
-  // Initialize calibration data
-  if (!calData.initialized) {
-    calData.minX = 32767;
-    calData.maxX = -32768;
-    calData.minY = 32767;
-    calData.maxY = -32768;
-    calData.minZ = 32767;
-    calData.maxZ = -32768;
-    calData.initialized = true;
-  }
-  
-  // Collect compass data
-  QMC5883LCompass& compass = getCompass();
-  compass.read();
-  
-  int x = compass.getX();
-  int y = compass.getY();
-  int z = compass.getZ();
-  
-  // Update min/max values
-  calData.minX = min(calData.minX, x);
-  calData.maxX = max(calData.maxX, x);
-  calData.minY = min(calData.minY, y);
-  calData.maxY = max(calData.maxY, y);
-  calData.minZ = min(calData.minZ, z);
-  calData.maxZ = max(calData.maxZ, z);
-  
-  // Print progress every 2 seconds
-  static unsigned long lastPrint = 0;
-  if (millis() - lastPrint >= 2000) {
-    unsigned long elapsed = (millis() - calibrationStartTime) / 1000;
-    int rangeX = calData.maxX - calData.minX;
-    int rangeY = calData.maxY - calData.minY;
-    int rangeZ = calData.maxZ - calData.minZ;
-    
-    Serial.printf("Calibration: %lus  X:%d Y:%d Z:%d\n", 
-                  elapsed, rangeX, rangeY, rangeZ);
-    lastPrint = millis();
-    displayNeedsUpdate = true;  // Update display with new time
-  }
-  
-  // Check if calibration was stopped
-  if (!compassCalibrating && calData.initialized) {
-    unsigned long calibrationDuration = millis() - calibrationStartTime;
-    
-    // Validate calibration
-    int rangeX = calData.maxX - calData.minX;
-    int rangeY = calData.maxY - calData.minY;
-    int rangeZ = calData.maxZ - calData.minZ;
-    
-    Serial.println("\n=== Compass Calibration Complete ===");
-    Serial.printf("Duration: %lu seconds\n", calibrationDuration / 1000);
-    
-    if (calibrationDuration < 15000) {
-      Serial.println("WARNING: Calibration too short (< 15s)");
-    }
-    
-    if (rangeX < 100 || rangeY < 100 || rangeZ < 100) {
-      Serial.println("WARNING: Insufficient rotation detected!");
-      Serial.println("Some axes have limited range.");
-    }
-    
-    // Apply calibration
-    setCompassCalibration(calData.minX, calData.maxX, 
-                         calData.minY, calData.maxY, 
-                         calData.minZ, calData.maxZ);
-    
-    Serial.println("Calibration Values:");
-    Serial.printf("X: [%d, %d] range=%d\n", calData.minX, calData.maxX, rangeX);
-    Serial.printf("Y: [%d, %d] range=%d\n", calData.minY, calData.maxY, rangeY);
-    Serial.printf("Z: [%d, %d] range=%d\n", calData.minZ, calData.maxZ, rangeZ);
-    Serial.println("\nAdd to initCompass() for permanent calibration:");
-    Serial.printf("compass.setCalibration(%d, %d, %d, %d, %d, %d);\n",
-                  calData.minX, calData.maxX, 
-                  calData.minY, calData.maxY, 
-                  calData.minZ, calData.maxZ);
-    
-    calData.initialized = false;
-  }
-}
-
 // ============================================================================
 // CORE 0: MAIN SETUP AND LOOP
 // ============================================================================
@@ -171,14 +70,14 @@ void setup() {
   
   // Initialize subsystems in order
   initSharedData();
-  //initMotorControl();
-  //initCompass();
-  //initGPS();
+  initMotorControl();
+  initCompass();
+  initGPS();
   initDisplay();
-  //initWebInterface();
+  initWebInterface();
   
   // Home the axes
-  //homeAxes();
+  homeAxes();
   
   Serial.println("Core 0: Ready!");
   Serial.println("\n=== Serial Commands ===");
@@ -213,13 +112,13 @@ void loop() {
   
   // Update GPS (1 Hz)
   if (now - lastGPSUpdate >= 1000) {
-//    updateGPS();
+    updateGPS();
     lastGPSUpdate = now;
   }
   
   // Motor control loop (100 Hz)
   if (now - lastControlUpdate >= TRACKING_UPDATE_MS) {
-//    updateMotorControl();
+    updateMotorControl();
     lastControlUpdate = now;
   }
   
@@ -230,8 +129,9 @@ void loop() {
   }
   
   // Handle compass calibration (20 Hz when active)
+  // Simply delegates to compass module
   if (now - lastCompassUpdate >= 50) {
-  //  handleCompassCalibration();
+    updateBackgroundCalibration();
     lastCompassUpdate = now;
   }
   
@@ -244,12 +144,12 @@ void loop() {
 
 void setup1() {
   Serial.println("Core 1: Satellite calculation engine started");
- // initTracking();
+  initTracking();
 }
 
 void loop1() {
   // Process TLE updates and calculate satellite positions
-//  updateTracking();
+  updateTracking();
   
   // Run at lower rate than motor control (10 Hz)
   delay(100);

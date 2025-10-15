@@ -49,6 +49,15 @@
 #define I2C_SDA            4   // GP4 Pin 6 (Shared with TOUCH_SDA)
 #define I2C_SCL            5   // GP5 Pin 7 (Shared with TOUCH_SCL)
 
+// Hardware Buttons (4 momentary switches on LCD module)
+#define BUTTON_1_PIN       20  // GP20 Pin 26
+#define BUTTON_2_PIN       21  // GP21 Pin 27
+#define BUTTON_3_PIN       22  // GP22 Pin 29
+#define BUTTON_4_PIN       26  // GP26 Pin 31
+
+// WS2812 LED Ring (50 LEDs)
+#define LED_DATA_PIN       27  // GP27 Pin 32
+
 // NOTE: Magnetometer and touch screen share I2C bus
 // This is OK because they have different I2C addresses:
 // - FT6206 touch: 0x38

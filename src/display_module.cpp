@@ -1,5 +1,5 @@
 // ============================================================================
-// display_module.cpp - WITH SETTINGS SCREEN
+// display_module.cpp
 // ============================================================================
 
 #include "display_module.h"
@@ -326,7 +326,7 @@ void drawSettingsScreen() {
   
   if (compassCalibrating) {
     tft.setTextColor(CYAN);
-    unsigned long elapsed = (millis() - calibrationStartTime) / 1000;
+    unsigned long elapsed = getCalibrationDuration();  // From compass module
     tft.print("Calibrating... ");
     tft.print(elapsed);
     tft.print("s");
@@ -598,13 +598,13 @@ void handleDisplayTouch() {
         Serial.println("Starting compass calibration");
         compassCalibrating = true;
         calibrationStartTime = millis();
-        // Start calibration in background
+        startBackgroundCalibration();  // Compass module handles the work
         Serial.println("Rotate device through all orientations");
         Serial.println("Touch 'Stop Cal' when done (15+ seconds recommended)");
       } else {
         Serial.println("Stopping compass calibration");
         compassCalibrating = false;
-        // Calibration will be processed by background task
+        stopBackgroundCalibration();  // Compass module processes and applies
       }
       displayNeedsUpdate = true;
       break;
