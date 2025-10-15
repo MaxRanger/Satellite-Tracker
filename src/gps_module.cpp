@@ -10,6 +10,11 @@ extern TrackerState trackerState;
 TinyGPSPlus gps;
 static unsigned long lastValidGPS = 0;
 
+// Use Serial2 for GPS (UART0 on GPIO 0/1)
+// Serial is USB, Serial1 is typically UART0, Serial2 is UART1
+// On RP2350 we need to configure UART0 on GPIO 0/1
+#define GPS_SERIAL Serial2
+
 TinyGPSPlus& getGPS() {
   return gps;
 }
@@ -17,13 +22,13 @@ TinyGPSPlus& getGPS() {
 void initGPS() {
   Serial.println("Initializing GPS...");
   
-  Serial1.setRX(GPS_RX);
-  Serial1.setTX(GPS_TX);
-  Serial1.begin(9600);
+  GPS_SERIAL.setRX(GPS_RX);
+  GPS_SERIAL.setTX(GPS_TX);
+  GPS_SERIAL.begin(9600);
   
   lastValidGPS = millis();
   
-  Serial.println("GPS initialized");
+  Serial.println("GPS initialized on UART0 (GPIO 0/1)");
   Serial.println("Waiting for GPS fix...");
 }
 
@@ -31,8 +36,8 @@ void updateGPS() {
   bool hadUpdate = false;
   
   // Process all available GPS data
-  while (Serial1.available() > 0) {
-    if (gps.encode(Serial1.read())) {
+  while (GPS_SERIAL.available() > 0) {
+    if (gps.encode(GPS_SERIAL.read())) {
       // Check if we have a complete valid fix
       if (gps.location.isValid() && gps.altitude.isValid() && 
           gps.date.isValid() && gps.time.isValid()) {

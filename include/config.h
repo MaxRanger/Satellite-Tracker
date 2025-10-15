@@ -10,29 +10,29 @@
 // ============================================================================
 
 // Motor Control Pins
-#define MOTOR_E_PWM_FWD    2
-#define MOTOR_E_PWM_REV    3
-#define MOTOR_A_PWM_FWD    4
-#define MOTOR_A_PWM_REV    5
+#define MOTOR_E_PWM_FWD    6
+#define MOTOR_E_PWM_REV    7
+#define MOTOR_A_PWM_FWD    8
+#define MOTOR_A_PWM_REV    9
 
 // Motor Driver Enable Pins (optional, depends on driver type)
 #define MOTOR_E_ENABLE     12
 #define MOTOR_A_ENABLE     13
 
 // Encoder Pins (must be consecutive for PIO)
-#define ENCODER_E_BASE     6   // E_A=6, E_B=7
-#define ENCODER_A_BASE     8   // A_A=8, A_B=9
+#define ENCODER_E_BASE     2   // E_A=2, E_B=3
+#define ENCODER_A_BASE     10  // A_A=10, A_B=11
 
 // Index Sensor Pins
-#define INDEX_E            10
-#define INDEX_A            11
+#define INDEX_E            24
+#define INDEX_A            25
 
 // Emergency Stop Pin (active low with internal pullup)
 #define EMERGENCY_STOP_PIN 15
 
-// GPS Serial (UART1)
-#define GPS_RX             17
-#define GPS_TX             16
+// GPS Serial (UART0)
+#define GPS_RX             1   // GP1 Pin 2 (UART0 RX)
+#define GPS_TX             0   // GP0 Pin 1 (UART0 TX)
 
 // Adafruit 2.8" TFT Display (PID 2423) - ILI9341 with FT6206 Touch
 #define TFT_MOSI           19  // GP19 Pin 25 (SPI TX)
@@ -74,7 +74,7 @@
 // ============================================================================
 
 // Select your motor driver type (uncomment ONE)
-#define MOTOR_DRIVER_L298N
+#define MOTOR_DRIVER_TB6612FNG
 // #define MOTOR_DRIVER_TB6612FNG
 // #define MOTOR_DRIVER_DRV8833
 // #define MOTOR_DRIVER_GENERIC

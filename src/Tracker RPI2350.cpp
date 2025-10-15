@@ -70,14 +70,14 @@ void setup() {
   
   // Initialize subsystems in order
   initSharedData();
-  initMotorControl();
-  initCompass();
-  initGPS();
+  //initMotorControl();
+  //initCompass();
+  //initGPS();
   initDisplay();
   initWebInterface();
   
   // Home the axes
-  homeAxes();
+  //homeAxes();
   
   Serial.println("Core 0: Ready!");
   Serial.println("\n=== Serial Commands ===");
@@ -102,23 +102,23 @@ void loop() {
   unsigned long now = millis();
   
   // Update LED indicator
-  updateLED();
+  //updateLED();
   
   // Handle web requests
-  handleWebClient();
+  //handleWebClient();
   
   // Handle touch input
   handleDisplayTouch();
   
   // Update GPS (1 Hz)
   if (now - lastGPSUpdate >= 1000) {
-    updateGPS();
+  //  updateGPS();
     lastGPSUpdate = now;
   }
   
   // Motor control loop (100 Hz)
   if (now - lastControlUpdate >= TRACKING_UPDATE_MS) {
-    updateMotorControl();
+//    updateMotorControl();
     lastControlUpdate = now;
   }
   
@@ -131,7 +131,7 @@ void loop() {
   // Handle compass calibration (20 Hz when active)
   // Simply delegates to compass module
   if (now - lastCompassUpdate >= 50) {
-    updateBackgroundCalibration();
+//    updateBackgroundCalibration();
     lastCompassUpdate = now;
   }
   
@@ -144,12 +144,12 @@ void loop() {
 
 void setup1() {
   Serial.println("Core 1: Satellite calculation engine started");
-  initTracking();
+//  initTracking();
 }
 
 void loop1() {
   // Process TLE updates and calculate satellite positions
-  updateTracking();
+//  updateTracking();
   
   // Run at lower rate than motor control (10 Hz)
   delay(100);
