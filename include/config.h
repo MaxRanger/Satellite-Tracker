@@ -1,5 +1,5 @@
 /*
- * config.h - Configuration and Pin Definitions - IMPROVED VERSION
+ * config.h - Configuration and Pin Definitions
  */
 
 #ifndef CONFIG_H
@@ -57,6 +57,11 @@
 
 // WS2812 LED Ring (50 LEDs)
 #define LED_DATA_PIN       27  // GP27 Pin 32
+
+// Analog Joystick (X/Y with push button)
+#define JOYSTICK_X_PIN     28  // GP28 Pin 34 (ADC2)
+#define JOYSTICK_Y_PIN     29  // GP29 Pin 35 (ADC3)
+#define JOYSTICK_BTN_PIN   23  // GP23 Pin 30 (Digital)
 
 // NOTE: Magnetometer and touch screen share I2C bus
 // This is OK because they have different I2C addresses:

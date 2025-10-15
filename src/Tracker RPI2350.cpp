@@ -13,7 +13,7 @@
 #include "tracking_logic.h"
 
 // LED "sign of life" indicator
-#define LED_BUILTIN 25  // Pico 2 built-in LED
+// #define LED_BUILTIN 25  // Pico 2 built-in LED
 
 // LED blink patterns
 unsigned long ledLastBlink = 0;

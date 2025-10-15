@@ -14,6 +14,7 @@
 typedef enum {
   LED_MODE_OFF = 0,
   LED_MODE_STEADY_GREEN,      // Normal operation
+  LED_MODE_STEADY_PURPLE,     // Joystick manual mode
   LED_MODE_FLASH_RED,         // Emergency stop
   LED_MODE_FLASH_YELLOW,      // GPS acquisition
   LED_MODE_FLASH_BLUE,        // Compass calibration
@@ -56,6 +57,7 @@ RGBColor colorRed();
 RGBColor colorGreen();
 RGBColor colorBlue();
 RGBColor colorYellow();
+RGBColor colorPurple();
 RGBColor colorOff();
 
 #endif // LED_MODULE_H

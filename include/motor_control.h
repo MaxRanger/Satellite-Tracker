@@ -1,5 +1,5 @@
 /*
- * motor_control.h - Motor control and PIO encoder management - IMPROVED
+ * motor_control.h - Motor control and PIO encoder management
  */
 
 #ifndef MOTOR_CONTROL_H

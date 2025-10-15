@@ -1,7 +1,6 @@
 /*
  * display_module.h - Adafruit 2.8" TFT display (PID 2423) interface
  * ILI9341 TFT driver with FT6206 capacitive touch
- * UPDATED WITH SETTINGS SCREEN
  */
 
 #ifndef DISPLAY_MODULE_H

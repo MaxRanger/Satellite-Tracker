@@ -165,8 +165,9 @@ void drawSetupScreen() {
   }
   
   // Buttons
+  uint16_t connectColor = (strlen(tempSSID) > 0) ? (uint16_t)GREEN : (uint16_t)GRAY;
   Button buttons[2] = {
-    {10, 185, 140, 40, TAG_SETUP_CONNECT, "Connect", strlen(tempSSID) > 0 ? GREEN : GRAY},
+    {10, 185, 140, 40, TAG_SETUP_CONNECT, "Connect", connectColor},
     {170, 185, 140, 40, TAG_SETUP_SKIP, "Skip WiFi", ORANGE}
   };
   
@@ -347,7 +348,7 @@ void drawSettingsScreen() {
   // Settings Buttons
   Button buttons[4] = {
     {10, 120, 300, 35, TAG_WIFI_CONFIG, "Configure WiFi", BLUE},
-    {10, 160, 145, 35, TAG_COMPASS_CAL, compassCalibrating ? "Stop Cal" : "Cal Compass", compassCalibrating ? ORANGE : GREEN},
+    {10, 160, 145, 35, TAG_COMPASS_CAL, compassCalibrating ? "Stop Cal" : "Cal Compass", (uint16_t)(compassCalibrating ? ORANGE : GREEN)},
     {165, 160, 145, 35, TAG_COMPASS_TEST, "Test Heading", CYAN},
     {10, 205, 300, 30, TAG_BACK, "BACK TO MAIN", ORANGE}
   };
