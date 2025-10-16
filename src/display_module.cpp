@@ -5,6 +5,7 @@
 #include "display_module.h"
 #include "motor_control.h"
 #include "compass_module.h"
+#include "web_interface.h"
 
 // External references to shared data
 extern MotorPosition motorPos;
@@ -415,46 +416,50 @@ void drawManualControlScreen() {
 
 // Serial command handler for WiFi setup
 void handleSerialWiFiSetup() {
-  if (Serial.available() > 0) {
-    String input = Serial.readStringUntil('\n');
-    input.trim();
-    
-    if (input.length() == 0) return;
-    
-    // Check for field selection commands
-    if (input.equalsIgnoreCase("SSID")) {
-      currentField = FIELD_SSID;
-      Serial.println("Enter SSID:");
-      return;
-    } else if (input.equalsIgnoreCase("PASSWORD") || input.equalsIgnoreCase("PASS")) {
-      currentField = FIELD_PASSWORD;
-      Serial.println("Enter Password:");
-      return;
+  if (!Serial.available()) return;
+  
+  String input = Serial.readStringUntil('\n');
+  input.trim();
+  
+  if (input.length() == 0) return;
+  
+  // Check for field selection commands
+  if (input.equalsIgnoreCase("SSID")) {
+    currentField = FIELD_SSID;
+    Serial.println("Enter SSID:");
+    return;
+  } else if (input.equalsIgnoreCase("PASSWORD") || input.equalsIgnoreCase("PASS")) {
+    currentField = FIELD_PASSWORD;
+    Serial.println("Enter Password:");
+    return;
+  }
+  
+  // Store input in appropriate field
+  if (currentField == FIELD_SSID) {
+    if (input.length() < sizeof(tempSSID)) {
+      memset(tempSSID, 0, sizeof(tempSSID));
+      strncpy(tempSSID, input.c_str(), sizeof(tempSSID) - 1);
+      tempSSID[sizeof(tempSSID) - 1] = '\0';
+      Serial.print("SSID set to: ");
+      Serial.println(tempSSID);
+      Serial.println("Type 'PASSWORD' then enter password");
+      displayNeedsUpdate = true;
+    } else {
+      Serial.println("ERROR: SSID too long (max 31 chars)");
     }
-    
-    // Store input in appropriate field
-    if (currentField == FIELD_SSID) {
-      if (input.length() < sizeof(tempSSID)) {
-        strncpy(tempSSID, input.c_str(), sizeof(tempSSID) - 1);
-        tempSSID[sizeof(tempSSID) - 1] = '\0';
-        Serial.print("SSID set to: ");
-        Serial.println(tempSSID);
-        Serial.println("Type 'PASSWORD' then enter password");
-      } else {
-        Serial.println("ERROR: SSID too long (max 31 chars)");
-      }
-    } else if (currentField == FIELD_PASSWORD) {
-      if (input.length() < sizeof(tempPassword)) {
-        strncpy(tempPassword, input.c_str(), sizeof(tempPassword) - 1);
-        tempPassword[sizeof(tempPassword) - 1] = '\0';
-        Serial.println("Password set (hidden)");
-        Serial.println("Touch 'Connect' button to apply");
-      } else {
-        Serial.println("ERROR: Password too long (max 63 chars)");
-      }
+  } else if (currentField == FIELD_PASSWORD) {
+    if (input.length() < sizeof(tempPassword)) {
+      memset(tempPassword, 0, sizeof(tempPassword));
+      strncpy(tempPassword, input.c_str(), sizeof(tempPassword) - 1);
+      tempPassword[sizeof(tempPassword) - 1] = '\0';
+      Serial.println("Password set (hidden)");
+      Serial.println("Touch 'Connect' button on display to apply");
+      displayNeedsUpdate = true;
+    } else {
+      Serial.println("ERROR: Password too long (max 63 chars)");
     }
-    
-    displayNeedsUpdate = true;
+  } else {
+    Serial.println("Type 'SSID' first, then enter network name");
   }
 }
 
@@ -669,11 +674,9 @@ void handleDisplayTouch() {
       currentScreen = SCREEN_MAIN;
       displayNeedsUpdate = true;
       
-      // Trigger WiFi reconnection
-      Serial.println("WiFi credentials updated - reconnecting...");
-      WiFi.disconnect();
-      delay(100);
-      WiFi.begin(wifiSSID, wifiPassword);
+      // Connect WiFi and start web server
+      Serial.println("WiFi credentials updated - connecting...");
+      initWebInterface();  // Call this to actually connect and start server
       break;
       
     case TAG_SETUP_SKIP:

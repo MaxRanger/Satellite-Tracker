@@ -105,7 +105,7 @@ void loop() {
   //updateLED();
   
   // Handle web requests
-  //handleWebClient();
+  handleWebClient();
   
   // Handle touch input
   handleDisplayTouch();
@@ -144,12 +144,12 @@ void loop() {
 
 void setup1() {
   Serial.println("Core 1: Satellite calculation engine started");
-//  initTracking();
+  initTracking();
 }
 
 void loop1() {
   // Process TLE updates and calculate satellite positions
-//  updateTracking();
+  updateTracking();
   
   // Run at lower rate than motor control (10 Hz)
   delay(100);

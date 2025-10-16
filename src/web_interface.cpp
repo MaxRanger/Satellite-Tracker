@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "web_interface.h"
+#include <LEAmDNS.h>
 
 // External references to shared data (defined in shared_data.cpp)
 extern MotorPosition motorPos;
@@ -39,41 +40,63 @@ void handleRoot() {
     return server.requestAuthentication();
   }
   
-  float currentEl = motorPos.elevation * DEGREES_PER_PULSE;
-  float currentAz = motorPos.azimuth * DEGREES_PER_PULSE;
-  while (currentAz < 0) currentAz += 360.0;
-  while (currentAz >= 360) currentAz -= 360.0;
-  
   // Sanitize user-provided data
   String safeSatName = sanitizeHTML(String(satelliteName));
   String safeTLE1 = sanitizeHTML(String(tleLine1));
   String safeTLE2 = sanitizeHTML(String(tleLine2));
   
   String html = "<!DOCTYPE html><html><head><title>Sat Tracker</title>";
-  html += "<meta http-equiv='refresh' content='2'>";
   html += "<meta charset='UTF-8'>";
-  html += "<style>body{font-family:Arial;margin:20px;}";
-  html += "table{border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}";
-  html += "input[type=text]{width:500px;max-width:100%;}</style></head><body>";
+  html += "<style>body{font-family:Arial;margin:20px;background:#f0f0f0;}";
+  html += "table{border-collapse:collapse;background:white;}td,th{border:1px solid #ddd;padding:8px;}";
+  html += "th{background:#4CAF50;color:white;}";
+  html += "input[type=text]{width:500px;max-width:100%;padding:5px;}";
+  html += "input[type=submit]{background:#4CAF50;color:white;padding:10px 20px;border:none;cursor:pointer;margin:5px;}";
+  html += "input[type=submit]:hover{background:#45a049;}";
+  html += ".status-good{color:green;font-weight:bold;}";
+  html += ".status-bad{color:red;font-weight:bold;}";
+  html += "h1,h2{color:#333;}</style>";
+  
+  // JavaScript for AJAX updates
+  html += "<script>";
+  html += "function updateStatus(){";
+  html += "  fetch('/status').then(r=>r.json()).then(d=>{";
+  html += "    document.getElementById('gpsValid').textContent=d.gpsValid?'Yes':'No';";
+  html += "    document.getElementById('gpsValid').className=d.gpsValid?'status-good':'status-bad';";
+  html += "    document.getElementById('location').textContent=d.lat.toFixed(6)+', '+d.lon.toFixed(6);";
+  html += "    document.getElementById('altitude').textContent=d.alt.toFixed(1)+' m';";
+  html += "    document.getElementById('time').textContent=d.time;";
+  html += "    document.getElementById('tleLoaded').textContent=d.tleValid?'Yes':'No';";
+  html += "    document.getElementById('tleLoaded').className=d.tleValid?'status-good':'status-bad';";
+  html += "    document.getElementById('tracking').textContent=d.tracking?'Active':'Idle';";
+  html += "    document.getElementById('tracking').className=d.tracking?'status-good':'status-bad';";
+  html += "    document.getElementById('currentAz').textContent=d.curAz.toFixed(2)+'°';";
+  html += "    document.getElementById('currentEl').textContent=d.curEl.toFixed(2)+'°';";
+  html += "    document.getElementById('targetAz').textContent=d.tgtAz.toFixed(2)+'°';";
+  html += "    document.getElementById('targetEl').textContent=d.tgtEl.toFixed(2)+'°';";
+  html += "  }).catch(e=>console.log('Update failed',e));";
+  html += "}";
+  html += "setInterval(updateStatus,1000);"; // Update every 1 second
+  html += "window.onload=updateStatus;";
+  html += "</script>";
+  
+  html += "</head><body>";
   html += "<h1>Satellite Tracker Control</h1>";
   
   html += "<h2>Status</h2><table>";
-  html += "<tr><td>GPS Valid</td><td>" + String(trackerState.gpsValid ? "Yes" : "No") + "</td></tr>";
-  html += "<tr><td>Location</td><td>" + String(trackerState.latitude, 6) + ", " + String(trackerState.longitude, 6) + "</td></tr>";
-  html += "<tr><td>Altitude</td><td>" + String(trackerState.altitude, 1) + " m</td></tr>";
-  html += "<tr><td>Time (UTC)</td><td>" + String(trackerState.gpsYear) + "-" + 
-          String(trackerState.gpsMonth) + "-" + String(trackerState.gpsDay) + " " +
-          String(trackerState.gpsHour) + ":" + String(trackerState.gpsMinute) + ":" + 
-          String(trackerState.gpsSecond) + "</td></tr>";
-  html += "<tr><td>TLE Loaded</td><td>" + String(trackerState.tleValid ? "Yes" : "No") + "</td></tr>";
-  html += "<tr><td>Tracking</td><td>" + String(trackerState.tracking ? "Active" : "Idle") + "</td></tr>";
+  html += "<tr><td>GPS Valid</td><td id='gpsValid'>...</td></tr>";
+  html += "<tr><td>Location</td><td id='location'>...</td></tr>";
+  html += "<tr><td>Altitude</td><td id='altitude'>...</td></tr>";
+  html += "<tr><td>Time (UTC)</td><td id='time'>...</td></tr>";
+  html += "<tr><td>TLE Loaded</td><td id='tleLoaded'>...</td></tr>";
+  html += "<tr><td>Tracking</td><td id='tracking'>...</td></tr>";
   html += "</table>";
   
   html += "<h2>Position</h2><table>";
-  html += "<tr><td>Current Azimuth</td><td>" + String(currentAz, 2) + "&deg;</td></tr>";
-  html += "<tr><td>Current Elevation</td><td>" + String(currentEl, 2) + "&deg;</td></tr>";
-  html += "<tr><td>Target Azimuth</td><td>" + String(targetPos.azimuth, 2) + "&deg;</td></tr>";
-  html += "<tr><td>Target Elevation</td><td>" + String(targetPos.elevation, 2) + "&deg;</td></tr>";
+  html += "<tr><td>Current Azimuth</td><td id='currentAz'>...</td></tr>";
+  html += "<tr><td>Current Elevation</td><td id='currentEl'>...</td></tr>";
+  html += "<tr><td>Target Azimuth</td><td id='targetAz'>...</td></tr>";
+  html += "<tr><td>Target Elevation</td><td id='targetEl'>...</td></tr>";
   html += "</table>";
   
   html += "<h2>Commands</h2>";
@@ -92,6 +115,38 @@ void handleRoot() {
   html += "</body></html>";
   
   server.send(200, "text/html", html);
+}
+
+void handleStatus() {
+  // Require authentication
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
+  }
+  
+  float currentEl = motorPos.elevation * DEGREES_PER_PULSE;
+  float currentAz = motorPos.azimuth * DEGREES_PER_PULSE;
+  while (currentAz < 0) currentAz += 360.0;
+  while (currentAz >= 360) currentAz -= 360.0;
+  
+  // Build JSON response
+  String json = "{";
+  json += "\"gpsValid\":" + String(trackerState.gpsValid ? "true" : "false") + ",";
+  json += "\"lat\":" + String(trackerState.latitude, 6) + ",";
+  json += "\"lon\":" + String(trackerState.longitude, 6) + ",";
+  json += "\"alt\":" + String(trackerState.altitude, 1) + ",";
+  json += "\"time\":\"" + String(trackerState.gpsYear) + "-" + 
+          String(trackerState.gpsMonth) + "-" + String(trackerState.gpsDay) + " " +
+          String(trackerState.gpsHour) + ":" + String(trackerState.gpsMinute) + ":" + 
+          String(trackerState.gpsSecond) + "\",";
+  json += "\"tleValid\":" + String(trackerState.tleValid ? "true" : "false") + ",";
+  json += "\"tracking\":" + String(trackerState.tracking ? "true" : "false") + ",";
+  json += "\"curAz\":" + String(currentAz, 2) + ",";
+  json += "\"curEl\":" + String(currentEl, 2) + ",";
+  json += "\"tgtAz\":" + String(targetPos.azimuth, 2) + ",";
+  json += "\"tgtEl\":" + String(targetPos.elevation, 2);
+  json += "}";
+  
+  server.send(200, "application/json", json);
 }
 
 void handleTLE() {
@@ -201,6 +256,14 @@ void initWebInterface() {
   }
   
   if (WiFi.status() == WL_CONNECTED) {
+
+    // Start mDNS
+    if (MDNS.begin("sattracker")) {
+      Serial.println("mDNS responder started");
+      Serial.println("Access at: http://sattracker.local");
+      MDNS.addService("http", "tcp", 80);
+    }
+
     Serial.println("\nWiFi connected!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
@@ -226,6 +289,7 @@ void initWebInterface() {
 void handleWebClient() {
   // Only handle web requests if WiFi is connected
   if (WiFi.status() == WL_CONNECTED) {
+    MDNS.update();  // Keep mDNS alive
     server.handleClient();
   }
 }
