@@ -72,7 +72,7 @@ void setup() {
   initSharedData();
   //initMotorControl();
   //initCompass();
-  //initGPS();
+  initGPS();
   initDisplay();
   initWebInterface();
   

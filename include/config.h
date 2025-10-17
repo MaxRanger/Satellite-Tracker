@@ -63,6 +63,9 @@
 #define JOYSTICK_Y_PIN     29  // GP29 Pin 35 (ADC3)
 #define JOYSTICK_BTN_PIN   23  // GP23 Pin 30 (Digital)
 
+// SD Card (SPI, shares bus with display)
+#define SD_CS_PIN          22  // GP22 Pin 29 (can be moved if conflicts)
+
 // NOTE: Magnetometer and touch screen share I2C bus
 // This is OK because they have different I2C addresses:
 // - FT6206 touch: 0x38
