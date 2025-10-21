@@ -568,8 +568,8 @@ void printBanner() {
    Serial.println(F("\n\n"));
   Serial.println(F("╔═════════════════════════════════════╗"));
   Serial.println(F("║   RP2350 Satellite Tracker System   ║"));
-  Serial.printf (  "║     v.  %s - %s      ║\r\n", __DATE__, __TIME__); // Mmm dd yyyy - hh:mm:ss (22 characters)
-  Serial.println(F("╚════════════════════════════════════════╝"));
+  Serial.printf (  "║    build: %s - %s    ║\r\n", __DATE__, __TIME__); // Mmm dd yyyy - hh:mm:ss (22 characters)
+  Serial.println(F("╚═════════════════════════════════════╝"));
   Serial.println();
 }
 

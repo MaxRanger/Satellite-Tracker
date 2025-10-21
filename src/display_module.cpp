@@ -44,6 +44,15 @@ char tempPassword[64] = "";
 bool compassCalibrating = false;
 unsigned long calibrationStartTime = 0;
 
+// Forward declarations
+static bool keyboardVisible = false;
+static bool shiftActive = false;
+static const char keyboardChars[] = "1234567890qwertyuiopasdfghjklzxcvbnm ";
+static const char keyboardCharsShift[] = "!@#$%^&*()QWERTYUIOPASDFGHJKLZXCVBNM ";
+
+// Forward declarations
+uint8_t getKeyboardTag(int16_t x, int16_t y);
+
 // Helper function to draw a button
 void drawButton(const Button &btn) {
   tft.fillRoundRect(btn.x, btn.y, btn.w, btn.h, 5, btn.color);
@@ -122,56 +131,123 @@ void drawSetupScreen() {
   tft.setCursor(80, 8);
   tft.print("WiFi Setup");
   
-  // Instructions
+  // Current field indicator
   tft.setTextSize(1);
-  tft.setCursor(10, 40);
-  tft.print("Use Serial Monitor for WiFi setup:");
+  tft.setCursor(10, 35);
+  tft.print(currentField == FIELD_SSID ? "SSID:" : "Password:");
   
-  tft.setCursor(10, 55);
-  tft.print("Type: SETWIFI <ssid> <password>");
-  
-  tft.setCursor(10, 70);
-  tft.print("Example:");
-  tft.setCursor(10, 80);
-  tft.print("  SETWIFI MyNetwork Pass123");
-  
-  tft.setCursor(10, 95);
-  tft.print("Then type: SAVE");
-  
-  // Current credentials display
+  // Input field
+  tft.drawRect(10, 48, 300, 25, CYAN);
+  tft.setTextColor(WHITE);
   tft.setTextSize(2);
-  tft.setCursor(10, 115);
-  tft.print("Current SSID:");
+  tft.setCursor(15, 55);
   
-  tft.setTextColor(strlen(tempSSID) > 0 ? WHITE : GRAY);
-  tft.setTextSize(1);
-  tft.setCursor(10, 135);
-  if (strlen(tempSSID) > 0) {
-    char displaySSID[32];
-    strncpy(displaySSID, tempSSID, sizeof(displaySSID) - 1);
-    displaySSID[sizeof(displaySSID) - 1] = '\0';
-    tft.print(displaySSID);
+  if (currentField == FIELD_SSID) {
+    if (strlen(tempSSID) > 0) {
+      char displaySSID[19];
+      strncpy(displaySSID, tempSSID, sizeof(displaySSID) - 1);
+      displaySSID[sizeof(displaySSID) - 1] = '\0';
+      tft.print(displaySSID);
+    }
   } else {
-    tft.print("Not configured");
+    if (strlen(tempPassword) > 0) {
+      for (size_t i = 0; i < strlen(tempPassword) && i < 18; i++) {
+        tft.print('*');
+      }
+    }
   }
   
-  // Buttons
-  tft.setTextColor(WHITE);
-  uint16_t connectColor = (strlen(tempSSID) > 0) ? (uint16_t)GREEN : (uint16_t)GRAY;
-  Button buttons[2] = {
-    {10, 185, 140, 40, TAG_SETUP_CONNECT, "Connect", connectColor},
-    {170, 185, 140, 40, TAG_SETUP_SKIP, "Skip WiFi", ORANGE}
+  // Smaller buttons to make room for keyboard
+  Button buttons[4] = {
+    {10, 80, 60, 28, TAG_FIELD_SSID, "SSID", currentField == FIELD_SSID ? CYAN : BLUE},
+    {75, 80, 60, 28, TAG_FIELD_PASSWORD, "Pass", currentField == FIELD_PASSWORD ? CYAN : BLUE},
+    {140, 80, 60, 28, TAG_KEYBOARD, "Keys", GREEN},
+    {205, 80, 50, 28, TAG_SETUP_CONNECT, "OK", (strlen(tempSSID) > 0) ? GREEN : GRAY}
   };
   
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 4; i++) {
     drawButton(buttons[i]);
   }
   
-  // Help text
-  tft.setTextSize(1);
-  tft.setTextColor(GRAY);
-  tft.setCursor(10, 230);
-  tft.print("Configure via Serial Monitor (115200)");
+  // Serial help text at bottom (only if keyboard not visible)
+  if (!keyboardVisible) {
+    tft.setTextSize(1);
+    tft.setTextColor(GRAY);
+    tft.setCursor(10, 220);
+    tft.print("Or use Serial: SETWIFI <ssid> <pass>");
+  }
+}
+
+void drawKeyboard() {
+  // Keyboard background - starts at y=115
+  tft.fillRect(0, 115, SCREEN_WIDTH, 125, BLACK);
+  
+  const char* chars = shiftActive ? keyboardCharsShift : keyboardChars;
+  
+  // Draw keyboard keys - adjusted to fit below smaller buttons
+  int keyWidth = 30;
+  int keyHeight = 22;
+  int startY = 118;
+  
+  // Row 1: 1234567890
+  for (int i = 0; i < 10; i++) {
+    int x = 5 + i * 31;
+    Button btn = {(int16_t)x, (int16_t)startY, (int16_t)keyWidth, (int16_t)keyHeight, 
+                  (uint8_t)(TAG_KB_CHAR_START + i), "", BLUE};
+    drawButton(btn);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.setCursor(x + 10, startY + 4);
+    tft.print(chars[i]);
+  }
+  
+  // Row 2: qwertyuiop
+  for (int i = 0; i < 10; i++) {
+    int x = 5 + i * 31;
+    Button btn = {(int16_t)x, (int16_t)(startY + 24), (int16_t)keyWidth, (int16_t)keyHeight,
+                  (uint8_t)(TAG_KB_CHAR_START + 10 + i), "", BLUE};
+    drawButton(btn);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.setCursor(x + 10, startY + 28);
+    tft.print(chars[10 + i]);
+  }
+  
+  // Row 3: asdfghjkl
+  for (int i = 0; i < 9; i++) {
+    int x = 20 + i * 31;
+    Button btn = {(int16_t)x, (int16_t)(startY + 48), (int16_t)keyWidth, (int16_t)keyHeight,
+                  (uint8_t)(TAG_KB_CHAR_START + 20 + i), "", BLUE};
+    drawButton(btn);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.setCursor(x + 10, startY + 52);
+    tft.print(chars[20 + i]);
+  }
+  
+  // Row 4: zxcvbnm
+  for (int i = 0; i < 7; i++) {
+    int x = 35 + i * 31;
+    Button btn = {(int16_t)x, (int16_t)(startY + 72), (int16_t)keyWidth, (int16_t)keyHeight,
+                  (uint8_t)(TAG_KB_CHAR_START + 29 + i), "", BLUE};
+    drawButton(btn);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.setCursor(x + 10, startY + 76);
+    tft.print(chars[29 + i]);
+  }
+  
+  // Bottom row: Shift, Space, Backspace, Done
+  Button bottomRow[4] = {
+    {5, 218, 45, 20, TAG_KB_SHIFT, "Shift", shiftActive ? ORANGE : GRAY},
+    {55, 218, 120, 20, TAG_KB_SPACE, "Space", BLUE},
+    {180, 218, 60, 20, TAG_KB_BACKSPACE, "Back", RED},
+    {245, 218, 70, 20, TAG_KB_DONE, "Done", GREEN}
+  };
+  
+  for (int i = 0; i < 4; i++) {
+    drawButton(bottomRow[i]);
+  }
 }
 
 void drawMainScreen() {
@@ -437,11 +513,18 @@ void handleDisplayTouch() {
   uint8_t tag = TAG_NONE;
   
   if (currentScreen == SCREEN_SETUP) {
-    Button buttons[2] = {
-      {10, 185, 140, 40, TAG_SETUP_CONNECT, "", GREEN},
-      {170, 185, 140, 40, TAG_SETUP_SKIP, "", ORANGE}
-    };
-    tag = getTouchedTag(x, y, buttons, 2);
+    if (keyboardVisible) {
+      // Check keyboard keys
+      tag = getKeyboardTag(x, y);
+    } else {
+      Button buttons[4] = {
+        {10, 80, 60, 28, TAG_FIELD_SSID, "", BLUE},
+        {75, 80, 60, 28, TAG_FIELD_PASSWORD, "", BLUE},
+        {140, 80, 60, 28, TAG_KEYBOARD, "", GREEN},
+        {205, 80, 50, 28, TAG_SETUP_CONNECT, "", GREEN}
+      };
+      tag = getTouchedTag(x, y, buttons, 4);
+    }
   }
   else if (currentScreen == SCREEN_MAIN) {
     Button buttons[5] = {
@@ -488,6 +571,81 @@ void handleDisplayTouch() {
   
   // Handle button press
   switch (tag) {
+    case TAG_FIELD_SSID:
+      currentField = FIELD_SSID;
+      displayNeedsUpdate = true;
+      break;
+      
+    case TAG_FIELD_PASSWORD:
+      currentField = FIELD_PASSWORD;
+      displayNeedsUpdate = true;
+      break;
+      
+    case TAG_KEYBOARD:
+      keyboardVisible = !keyboardVisible;
+      if (keyboardVisible) {
+        drawKeyboard();
+      } else {
+        displayNeedsUpdate = true;
+      }
+      break;
+      
+    case TAG_KB_SHIFT:
+      shiftActive = !shiftActive;
+      drawKeyboard();
+      break;
+      
+    case TAG_KB_SPACE:
+      if (currentField == FIELD_SSID && strlen(tempSSID) < sizeof(tempSSID) - 1) {
+        strncat(tempSSID, " ", 1);
+        displayNeedsUpdate = true;
+      } else if (currentField == FIELD_PASSWORD && strlen(tempPassword) < sizeof(tempPassword) - 1) {
+        strncat(tempPassword, " ", 1);
+        displayNeedsUpdate = true;
+      }
+      break;
+      
+    case TAG_KB_BACKSPACE:
+      if (currentField == FIELD_SSID && strlen(tempSSID) > 0) {
+        tempSSID[strlen(tempSSID) - 1] = '\0';
+        displayNeedsUpdate = true;
+      } else if (currentField == FIELD_PASSWORD && strlen(tempPassword) > 0) {
+        tempPassword[strlen(tempPassword) - 1] = '\0';
+        displayNeedsUpdate = true;
+      }
+      break;
+      
+    case TAG_KB_DONE:
+      keyboardVisible = false;
+      displayNeedsUpdate = true;
+      break;
+      
+    default:
+      // Check if it's a character key
+      if (tag >= TAG_KB_CHAR_START && tag < TAG_KB_CHAR_START + 37) {
+        int charIndex = tag - TAG_KB_CHAR_START;
+        const char* chars = shiftActive ? keyboardCharsShift : keyboardChars;
+        char c = chars[charIndex];
+        
+        if (currentField == FIELD_SSID && strlen(tempSSID) < sizeof(tempSSID) - 1) {
+          strncat(tempSSID, &c, 1);
+          displayNeedsUpdate = true;
+        } else if (currentField == FIELD_PASSWORD && strlen(tempPassword) < sizeof(tempPassword) - 1) {
+          strncat(tempPassword, &c, 1);
+          displayNeedsUpdate = true;
+        }
+        
+        // Auto-disable shift after character
+        if (shiftActive) {
+          shiftActive = false;
+          drawKeyboard();
+        }
+      }
+      break;
+  }
+  
+  // Original button handlers continue below
+  switch (tag) {
     case TAG_HOME:
       Serial.println("Home button");
       trackerState.tracking = false;
@@ -527,14 +685,8 @@ void handleDisplayTouch() {
       
     case TAG_WIFI_CONFIG:
       Serial.println("WiFi Config button");
-      Serial.println("\n=== WiFi Configuration ===");
-      Serial.println("Use Serial Monitor commands:");
-      Serial.println("  SETWIFI <ssid> <password>");
-      Serial.println("  Example: SETWIFI MyNetwork MyPass123");
-      Serial.println("  Then type: SAVE");
-      Serial.println("  Then restart to connect");
-      
       currentScreen = SCREEN_SETUP;
+      keyboardVisible = false;
       displayNeedsUpdate = true;
       break;
       
@@ -626,6 +778,63 @@ void handleDisplayTouch() {
   }
 }
 
+// Helper function to detect keyboard key press
+uint8_t getKeyboardTag(int16_t x, int16_t y) {
+  int keyWidth = 30;
+  int keyHeight = 22;
+  int startY = 118;
+  
+  // Row 1: 1234567890 (10 keys)
+  if (y >= startY && y <= startY + keyHeight) {
+    for (int i = 0; i < 10; i++) {
+      int kx = 5 + i * 31;
+      if (x >= kx && x <= kx + keyWidth) {
+        return TAG_KB_CHAR_START + i;
+      }
+    }
+  }
+  
+  // Row 2: qwertyuiop (10 keys)
+  if (y >= startY + 24 && y <= startY + 24 + keyHeight) {
+    for (int i = 0; i < 10; i++) {
+      int kx = 5 + i * 31;
+      if (x >= kx && x <= kx + keyWidth) {
+        return TAG_KB_CHAR_START + 10 + i;
+      }
+    }
+  }
+  
+  // Row 3: asdfghjkl (9 keys)
+  if (y >= startY + 48 && y <= startY + 48 + keyHeight) {
+    for (int i = 0; i < 9; i++) {
+      int kx = 20 + i * 31;
+      if (x >= kx && x <= kx + keyWidth) {
+        return TAG_KB_CHAR_START + 20 + i;
+      }
+    }
+  }
+  
+  // Row 4: zxcvbnm (7 keys)
+  if (y >= startY + 72 && y <= startY + 72 + keyHeight) {
+    for (int i = 0; i < 7; i++) {
+      int kx = 35 + i * 31;
+      if (x >= kx && x <= kx + keyWidth) {
+        return TAG_KB_CHAR_START + 29 + i;
+      }
+    }
+  }
+  
+  // Bottom row buttons
+  Button bottomRow[4] = {
+    {5, 218, 45, 20, TAG_KB_SHIFT, "", GRAY},
+    {55, 218, 120, 20, TAG_KB_SPACE, "", BLUE},
+    {180, 218, 60, 20, TAG_KB_BACKSPACE, "", RED},
+    {245, 218, 70, 20, TAG_KB_DONE, "", GREEN}
+  };
+  
+  return getTouchedTag(x, y, bottomRow, 4);
+}
+
 void updateDisplay() {
   if (!displayNeedsUpdate) return;
   
@@ -642,6 +851,9 @@ void updateDisplay() {
   switch (currentScreen) {
     case SCREEN_SETUP:
       drawSetupScreen();
+      if (keyboardVisible) {
+        drawKeyboard();
+      }
       break;
     case SCREEN_MAIN:
       drawMainScreen();
