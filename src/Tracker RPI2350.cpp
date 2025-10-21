@@ -1,5 +1,6 @@
 /*
  * Raspberry Pi Pico 2 (RP2350) Satellite Tracker - Main Program
+ * Updated with Serial Interface Module
  */
 
 #include <Arduino.h>
@@ -11,46 +12,45 @@
 #include "display_module.h"
 #include "web_interface.h"
 #include "tracking_logic.h"
+#include "serial_interface.h"  // NEW: Serial command interface
+#include "joystick_module.h"
+#include "button_module.h"
+#include "led_module.h"
+#include "storage_module.h"
 
-// LED "sign of life" indicator
-// #define LED_BUILTIN 25  // Pico 2 built-in LED
 
-// LED blink patterns
-unsigned long ledLastBlink = 0;
-unsigned int ledBlinkInterval = 1000;  // Default: 1 second
-bool ledState = false;
+// Pulse LED blink patterns
+unsigned long pulseLastBlink = 0;
+unsigned int pulseBlinkInterval = 1000;
+bool pulseState = false;
 
-// Compass calibration state (shared with display module)
-extern bool compassCalibrating;
-extern unsigned long calibrationStartTime;
-
-void updateLED() {
+void updatePulse() {
   unsigned long now = millis();
   
   // Determine blink pattern based on system state
   if (!trackerState.gpsValid) {
     // Fast blink: No GPS lock
-    ledBlinkInterval = 200;
+    pulseBlinkInterval = 200;
   } else if (trackerState.tracking) {
     // Double blink: Tracking active
     if ((now / 100) % 10 < 2) {
-      ledBlinkInterval = 100;
+      pulseBlinkInterval = 100;
     } else {
-      ledBlinkInterval = 800;
+      pulseBlinkInterval = 800;
     }
   } else if (WiFi.status() == WL_CONNECTED) {
     // Slow blink: Idle with WiFi
-    ledBlinkInterval = 1000;
+    pulseBlinkInterval = 1000;
   } else {
     // Medium blink: Idle without WiFi
-    ledBlinkInterval = 500;
+    pulseBlinkInterval = 500;
   }
   
-  // Update LED state
-  if (now - ledLastBlink >= ledBlinkInterval) {
-    ledState = !ledState;
-    digitalWrite(LED_BUILTIN, ledState ? HIGH : LOW);
-    ledLastBlink = now;
+  // Update pulse LED state
+  if (now - pulseLastBlink >= pulseBlinkInterval) {
+    pulseState = !pulseState;
+    digitalWrite(LED_BUILTIN, pulseState ? HIGH : LOW);
+    pulseLastBlink = now;
   }
 }
 
@@ -61,36 +61,94 @@ void updateLED() {
 void setup() {
   Serial.begin(115200);
   delay(2000);
-  Serial.println("\n\n=== RP2350 Satellite Tracker ===");
-  Serial.println("Core 0: Initializing...");
   
-  // Initialize LED
+  // Print banner
+  printBanner();
+  Serial.println(F("Core 0: Initializing..."));
+  
+  // Initialize Pulse LED
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);  // Turn on during init
+  digitalWrite(LED_BUILTIN, HIGH);
   
   // Initialize subsystems in order
   initSharedData();
+  initStorage();
   //initMotorControl();
-  //initCompass();
-  initGPS();
+  initCompass();
+  //initGPS();
+  initJoystick();          // NEW: Initialize joystick
+  //initButtons();           // NEW: Initialize hardware buttons
+  initLEDs();              // NEW: Initialize LED ring
   initDisplay();
+  initSerialInterface();   // NEW: Initialize serial command interface
+  
+  // Load saved configuration
+  if (isStorageAvailable()) {
+    Serial.println(F("Loading saved configuration..."));
+    StorageConfig config = {0};
+    if (loadConfig(&config)) {
+      // WiFi
+      if (config.wifiConfigured) {
+        strncpy(wifiSSID, config.wifiSSID, sizeof(wifiSSID) - 1);
+        strncpy(wifiPassword, config.wifiPassword, sizeof(wifiPassword) - 1);
+        wifiConfigured = true;
+        Serial.println(F("WiFi credentials loaded"));
+      }
+      
+      // Joystick calibration
+      if (config.joyCalibrated) {
+        JoystickCalibration joyCal;
+        joyCal.xMin = config.joyXMin;
+        joyCal.xCenter = config.joyXCenter;
+        joyCal.xMax = config.joyXMax;
+        joyCal.yMin = config.joyYMin;
+        joyCal.yCenter = config.joyYCenter;
+        joyCal.yMax = config.joyYMax;
+        joyCal.deadband = config.joyDeadband;
+        setJoystickCalibration(joyCal);
+        Serial.println(F("Joystick calibration loaded"));
+      }
+      
+      // Compass calibration
+      if (config.compassCalibrated) {
+        setCompassCalibration(config.compassMinX, config.compassMaxX,
+                             config.compassMinY, config.compassMaxY,
+                             config.compassMinZ, config.compassMaxZ);
+        Serial.println(F("Compass calibration loaded"));
+      }
+      
+      // TLE data
+      if (config.tleValid) {
+        strncpy(satelliteName, config.satelliteName, sizeof(satelliteName) - 1);
+        strncpy(tleLine1, config.tleLine1, sizeof(tleLine1) - 1);
+        strncpy(tleLine2, config.tleLine2, sizeof(tleLine2) - 1);
+        trackerState.tleValid = true;
+        Serial.print(F("TLE loaded: "));
+        Serial.println(satelliteName);
+      }
+    }
+  }
+  
+  // Initialize web interface (uses WiFi credentials)
   initWebInterface();
   
   // Home the axes
   //homeAxes();
   
-  Serial.println("Core 0: Ready!");
-  Serial.println("\n=== Serial Commands ===");
-  Serial.println("On Settings screen:");
-  Serial.println("  Type 'SSID' then enter network name");
-  Serial.println("  Type 'PASSWORD' then enter network password");
-  Serial.println("  Touch 'Connect' to apply");
-  Serial.println("\nFor manual compass calibration:");
-  Serial.println("  Call calibrateCompass() from Serial Monitor");
-  Serial.println("  Or use Settings screen 'Cal Compass' button\n");
+  Serial.println(F("Core 0: Ready!"));
+  Serial.println();
+  printHelp();  // Print available commands
+  Serial.print(F("> "));  // Command prompt
   
   // LED off after init
   digitalWrite(LED_BUILTIN, LOW);
+  
+  // Set LED mode based on system state
+  // if (trackerState.gpsValid) {
+  //   setLEDMode(LED_MODE_STEADY_GREEN);
+  // } else {
+  //   setLEDMode(LED_MODE_FLASH_YELLOW);
+  // }
 }
 
 void loop() {
@@ -98,11 +156,22 @@ void loop() {
   static unsigned long lastGPSUpdate = 0;
   static unsigned long lastDisplayUpdate = 0;
   static unsigned long lastCompassUpdate = 0;
+  static unsigned long lastJoystickUpdate = 0;
+  static unsigned long lastLEDUpdate = 0;
   
   unsigned long now = millis();
   
   // Update LED indicator
-  //updateLED();
+  updatePulse();
+  
+  // Update LED ring (20 Hz)
+  if (now - lastLEDUpdate >= 50) {
+    //updateLEDs();
+    lastLEDUpdate = now;
+  }
+  
+  // Process serial commands (NEW)
+  updateSerialInterface();
   
   // Handle web requests
   handleWebClient();
@@ -110,15 +179,76 @@ void loop() {
   // Handle touch input
   handleDisplayTouch();
   
+  // Poll hardware buttons (NEW)
+  //pollButtons();
+  
+  // Update joystick (NEW - 50 Hz)
+  if (now - lastJoystickUpdate >= 20) {
+    updateJoystick();
+    
+    // If joystick manual mode is active, override target position
+    if (isJoystickManualMode()) {
+      float azSpeed = getJoystickAzimuthSpeed();
+      float elSpeed = getJoystickElevationSpeed();
+      
+      // Update target position based on joystick
+      // Speed is normalized -1 to +1, scale to degrees per update
+      const float MANUAL_SPEED = 1.0; // degrees per 20ms at full deflection
+      
+      if (abs(azSpeed) > 0.01) {
+        targetPos.azimuth += azSpeed * MANUAL_SPEED;
+        while (targetPos.azimuth < 0) targetPos.azimuth += 360.0;
+        while (targetPos.azimuth >= 360) targetPos.azimuth -= 360.0;
+        trackerState.tracking = false; // Disable tracking when manually controlled
+      }
+      
+      if (abs(elSpeed) > 0.01) {
+        targetPos.elevation += elSpeed * MANUAL_SPEED;
+        targetPos.elevation = constrain(targetPos.elevation, MIN_ELEVATION, MAX_ELEVATION);
+        trackerState.tracking = false;
+      }
+      
+      // Update LED mode for manual control
+      setLEDMode(LED_MODE_STEADY_PURPLE);
+    } else if (!trackerState.tracking) {
+      // Return to normal LED mode when manual mode exits
+      if (trackerState.gpsValid) {
+        setLEDMode(LED_MODE_STEADY_GREEN);
+      } else {
+        setLEDMode(LED_MODE_FLASH_YELLOW);
+      }
+    }
+    
+    lastJoystickUpdate = now;
+  }
+  
   // Update GPS (1 Hz)
   if (now - lastGPSUpdate >= 1000) {
-  //  updateGPS();
+    //updateGPS();
+    
+    // Update LED mode based on GPS status
+    if (trackerState.gpsValid && !isJoystickManualMode()) {
+      if (trackerState.tracking) {
+        setLEDMode(LED_MODE_STEADY_GREEN);
+      } else {
+        setLEDMode(LED_MODE_STEADY_GREEN);
+      }
+    } else if (!isJoystickManualMode()) {
+      setLEDMode(LED_MODE_FLASH_YELLOW);
+    }
+    
     lastGPSUpdate = now;
   }
   
   // Motor control loop (100 Hz)
   if (now - lastControlUpdate >= TRACKING_UPDATE_MS) {
-//    updateMotorControl();
+    //updateMotorControl();
+    
+    // Update LED for emergency stop
+    if (isEmergencyStop()) {
+      setLEDMode(LED_MODE_FLASH_RED);
+    }
+    
     lastControlUpdate = now;
   }
   
@@ -129,9 +259,14 @@ void loop() {
   }
   
   // Handle compass calibration (20 Hz when active)
-  // Simply delegates to compass module
   if (now - lastCompassUpdate >= 50) {
-//    updateBackgroundCalibration();
+    //updateBackgroundCalibration();
+    
+    // Update LED during compass calibration
+    if (isBackgroundCalibrationActive()) {
+      setLEDMode(LED_MODE_FLASH_BLUE);
+    }
+    
     lastCompassUpdate = now;
   }
   
@@ -143,13 +278,13 @@ void loop() {
 // ============================================================================
 
 void setup1() {
-  Serial.println("Core 1: Satellite calculation engine started");
-  initTracking();
+  Serial.println(F("Core 1: Satellite calculation engine started"));
+  //initTracking();
 }
 
 void loop1() {
   // Process TLE updates and calculate satellite positions
-  updateTracking();
+  //updateTracking();
   
   // Run at lower rate than motor control (10 Hz)
   delay(100);

@@ -1,5 +1,5 @@
 /*
- * joystick_module.h - Analog X/Y joystick with push button
+ * joystick_module.h - Analog X/Y joystick (no button - button now E-Stop)
  * Controls azimuth and elevation in manual mode
  */
 
@@ -9,13 +9,12 @@
 #include <Arduino.h>
 #include "config.h"
 
-// Joystick data structure
+// Joystick data structure (button removed)
 struct JoystickData {
   int16_t x;           // Raw X reading (0-4095 for 12-bit ADC)
   int16_t y;           // Raw Y reading
   float xNormalized;   // Normalized X (-1.0 to +1.0)
   float yNormalized;   // Normalized Y (-1.0 to +1.0)
-  bool buttonPressed;  // Button state
   bool inDeadband;     // True if joystick near center
 };
 
@@ -29,9 +28,6 @@ struct JoystickCalibration {
   uint16_t yMax;       // Maximum Y reading
   uint16_t deadband;   // Deadband radius (0-100, percentage)
 };
-
-// Joystick mode toggle callback
-typedef void (*JoystickToggleCallback)(bool manualModeActive);
 
 // ============================================================================
 // PUBLIC API
@@ -57,11 +53,9 @@ float getJoystickAzimuthSpeed();
 // Negative = down, Positive = up, 0 = stop
 float getJoystickElevationSpeed();
 
-// Check if manual mode is active (toggled by button)
+// Manual mode control (called by display/serial, not by joystick button)
+void setJoystickManualMode(bool active);
 bool isJoystickManualMode();
-
-// Set manual mode callback (called when button toggles mode)
-void setJoystickToggleCallback(JoystickToggleCallback callback);
 
 // ============================================================================
 // CALIBRATION API

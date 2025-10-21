@@ -1,11 +1,11 @@
 // ============================================================================
-// joystick_module.cpp - Analog joystick implementation
+// joystick_module.cpp - Analog joystick implementation (no button)
 // ============================================================================
 
 #include "joystick_module.h"
 
-// Current joystick state
-static JoystickData currentState = {0, 0, 0.0, 0.0, false, true};
+// Current joystick state (button fields removed)
+static JoystickData currentState = {0, 0, 0.0, 0.0, true};
 
 // Calibration data
 static JoystickCalibration calibration = {
@@ -25,14 +25,8 @@ static uint16_t calYMin = 4095, calYMax = 0;
 static uint32_t calXSum = 0, calYSum = 0;
 static uint16_t calSampleCount = 0;
 
-// Manual mode state
+// Manual mode state - now controlled externally (not by joystick button)
 static bool manualModeActive = false;
-static bool lastButtonState = false;
-static unsigned long lastButtonChange = 0;
-static JoystickToggleCallback toggleCallback = nullptr;
-
-// Debounce time for button
-#define BUTTON_DEBOUNCE_MS 50
 
 // ============================================================================
 // INTERNAL FUNCTIONS
@@ -73,38 +67,10 @@ static bool isInDeadband(int16_t raw, uint16_t center, uint16_t range, uint16_t 
   return offset < deadbandRange;
 }
 
-// Read raw ADC values
-static void readRawJoystick(uint16_t* x, uint16_t* y, bool* button) {
+// Read raw ADC values (no button)
+static void readRawJoystick(uint16_t* x, uint16_t* y) {
   *x = analogRead(JOYSTICK_X_PIN);
   *y = analogRead(JOYSTICK_Y_PIN);
-  *button = !digitalRead(JOYSTICK_BTN_PIN);  // Active low
-}
-
-// Process button with debouncing and toggle
-static void processButton(bool currentButton) {
-  unsigned long now = millis();
-  
-  // Debounce check
-  if ((now - lastButtonChange) < BUTTON_DEBOUNCE_MS) {
-    return;
-  }
-  
-  // Detect button press (rising edge)
-  if (currentButton && !lastButtonState) {
-    // Toggle manual mode
-    manualModeActive = !manualModeActive;
-    lastButtonChange = now;
-    
-    Serial.print("Joystick manual mode: ");
-    Serial.println(manualModeActive ? "ACTIVE" : "INACTIVE");
-    
-    // Call callback if set
-    if (toggleCallback) {
-      toggleCallback(manualModeActive);
-    }
-  }
-  
-  lastButtonState = currentButton;
 }
 
 // ============================================================================
@@ -119,17 +85,15 @@ void initJoystick() {
   pinMode(JOYSTICK_X_PIN, INPUT);
   pinMode(JOYSTICK_Y_PIN, INPUT);
   
-  // Configure button pin with pullup
-  pinMode(JOYSTICK_BTN_PIN, INPUT_PULLUP);
+  // No button pin configuration (button is now E-Stop)
   
   // Read initial center position
   uint16_t x, y;
-  bool button;
   
   // Average multiple samples for center calibration
   uint32_t xSum = 0, ySum = 0;
   for (int i = 0; i < 10; i++) {
-    readRawJoystick(&x, &y, &button);
+    readRawJoystick(&x, &y);
     xSum += x;
     ySum += y;
     delay(10);
@@ -141,23 +105,18 @@ void initJoystick() {
   Serial.println("Joystick initialized");
   Serial.printf("  X pin: GPIO %d, Center: %d\n", JOYSTICK_X_PIN, calibration.xCenter);
   Serial.printf("  Y pin: GPIO %d, Center: %d\n", JOYSTICK_Y_PIN, calibration.yCenter);
-  Serial.printf("  Button: GPIO %d\n", JOYSTICK_BTN_PIN);
   Serial.printf("  Deadband: %d%%\n", calibration.deadband);
+  Serial.println("  Note: Joystick button is now Emergency Stop (GP23)");
 }
 
 JoystickData readJoystick() {
   uint16_t rawX, rawY;
-  bool button;
   
-  readRawJoystick(&rawX, &rawY, &button);
+  readRawJoystick(&rawX, &rawY);
   
   // Update state
   currentState.x = rawX;
   currentState.y = rawY;
-  currentState.buttonPressed = button;
-  
-  // Process button (toggle mode)
-  processButton(button);
   
   // Normalize values with deadband
   currentState.xNormalized = applyDeadbandAndNormalize(
@@ -218,12 +177,17 @@ float getJoystickElevationSpeed() {
   return currentState.yNormalized;
 }
 
-bool isJoystickManualMode() {
-  return manualModeActive;
+// Manual mode control - called by external systems (display/serial)
+void setJoystickManualMode(bool active) {
+  if (manualModeActive != active) {
+    manualModeActive = active;
+    Serial.print("Joystick manual mode: ");
+    Serial.println(manualModeActive ? "ACTIVE" : "INACTIVE");
+  }
 }
 
-void setJoystickToggleCallback(JoystickToggleCallback callback) {
-  toggleCallback = callback;
+bool isJoystickManualMode() {
+  return manualModeActive;
 }
 
 // ============================================================================
@@ -306,8 +270,7 @@ void updateJoystickCalibration() {
   }
   
   uint16_t x, y;
-  bool button;
-  readRawJoystick(&x, &y, &button);
+  readRawJoystick(&x, &y);
   
   // Update min/max
   calXMin = min(calXMin, x);
@@ -370,9 +333,7 @@ void printJoystickState() {
   Serial.print(currentState.y);
   Serial.print(" (");
   Serial.print(currentState.yNormalized, 2);
-  Serial.print(") Btn=");
-  Serial.print(currentState.buttonPressed ? "PRESS" : "REL");
-  Serial.print(" Mode=");
+  Serial.print(") Mode=");
   Serial.print(manualModeActive ? "MANUAL" : "AUTO");
   Serial.print(" Deadband=");
   Serial.println(currentState.inDeadband ? "YES" : "NO");

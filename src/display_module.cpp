@@ -30,7 +30,8 @@ int16_t lastTouchY = -1;
 bool wasTouched = false;
 uint8_t lastTag = TAG_NONE;
 
-// WiFi setup state
+// WiFi setup state - REMOVED serial input handling
+// WiFi configuration now done ONLY via serial_interface module
 enum SetupField {
   FIELD_SSID,
   FIELD_PASSWORD
@@ -124,48 +125,38 @@ void drawSetupScreen() {
   // Instructions
   tft.setTextSize(1);
   tft.setCursor(10, 40);
-  tft.print("Configure WiFi for web access");
+  tft.print("Use Serial Monitor for WiFi setup:");
   
-  // SSID field
+  tft.setCursor(10, 55);
+  tft.print("Type: SETWIFI <ssid> <password>");
+  
+  tft.setCursor(10, 70);
+  tft.print("Example:");
+  tft.setCursor(10, 80);
+  tft.print("  SETWIFI MyNetwork Pass123");
+  
+  tft.setCursor(10, 95);
+  tft.print("Then type: SAVE");
+  
+  // Current credentials display
   tft.setTextSize(2);
-  tft.setCursor(10, 60);
-  tft.print("SSID:");
+  tft.setCursor(10, 115);
+  tft.print("Current SSID:");
   
-  tft.drawRect(10, 80, 300, 30, currentField == FIELD_SSID ? CYAN : GRAY);
   tft.setTextColor(strlen(tempSSID) > 0 ? WHITE : GRAY);
-  tft.setTextSize(2);
-  tft.setCursor(15, 88);
+  tft.setTextSize(1);
+  tft.setCursor(10, 135);
   if (strlen(tempSSID) > 0) {
-    char displaySSID[20];
+    char displaySSID[32];
     strncpy(displaySSID, tempSSID, sizeof(displaySSID) - 1);
     displaySSID[sizeof(displaySSID) - 1] = '\0';
     tft.print(displaySSID);
   } else {
-    tft.setTextSize(1);
-    tft.print("<enter via Serial Monitor>");
-  }
-  
-  // Password field
-  tft.setTextColor(WHITE);
-  tft.setTextSize(2);
-  tft.setCursor(10, 120);
-  tft.print("Password:");
-  
-  tft.drawRect(10, 140, 300, 30, currentField == FIELD_PASSWORD ? CYAN : GRAY);
-  tft.setTextColor(strlen(tempPassword) > 0 ? WHITE : GRAY);
-  tft.setTextSize(2);
-  tft.setCursor(15, 148);
-  if (strlen(tempPassword) > 0) {
-    size_t len = strlen(tempPassword);
-    for (size_t i = 0; i < len && i < 20; i++) {
-      tft.print('*');
-    }
-  } else {
-    tft.setTextSize(1);
-    tft.print("<enter via Serial Monitor>");
+    tft.print("Not configured");
   }
   
   // Buttons
+  tft.setTextColor(WHITE);
   uint16_t connectColor = (strlen(tempSSID) > 0) ? (uint16_t)GREEN : (uint16_t)GRAY;
   Button buttons[2] = {
     {10, 185, 140, 40, TAG_SETUP_CONNECT, "Connect", connectColor},
@@ -180,7 +171,7 @@ void drawSetupScreen() {
   tft.setTextSize(1);
   tft.setTextColor(GRAY);
   tft.setCursor(10, 230);
-  tft.print("Enter credentials via Serial Monitor");
+  tft.print("Configure via Serial Monitor (115200)");
 }
 
 void drawMainScreen() {
@@ -328,7 +319,7 @@ void drawSettingsScreen() {
   
   if (compassCalibrating) {
     tft.setTextColor(CYAN);
-    unsigned long elapsed = getCalibrationDuration();  // From compass module
+    unsigned long elapsed = getCalibrationDuration();
     tft.print("Calibrating... ");
     tft.print(elapsed);
     tft.print("s");
@@ -414,62 +405,8 @@ void drawManualControlScreen() {
   drawButton(backBtn);
 }
 
-// Serial command handler for WiFi setup
-void handleSerialWiFiSetup() {
-  if (!Serial.available()) return;
-  
-  String input = Serial.readStringUntil('\n');
-  input.trim();
-  
-  if (input.length() == 0) return;
-  
-  // Check for field selection commands
-  if (input.equalsIgnoreCase("SSID")) {
-    currentField = FIELD_SSID;
-    Serial.println("Enter SSID:");
-    return;
-  } else if (input.equalsIgnoreCase("PASSWORD") || input.equalsIgnoreCase("PASS")) {
-    currentField = FIELD_PASSWORD;
-    Serial.println("Enter Password:");
-    return;
-  }
-  
-  // Store input in appropriate field
-  if (currentField == FIELD_SSID) {
-    if (input.length() < sizeof(tempSSID)) {
-      memset(tempSSID, 0, sizeof(tempSSID));
-      strncpy(tempSSID, input.c_str(), sizeof(tempSSID) - 1);
-      tempSSID[sizeof(tempSSID) - 1] = '\0';
-      Serial.print("SSID set to: ");
-      Serial.println(tempSSID);
-      Serial.println("Type 'PASSWORD' then enter password");
-      displayNeedsUpdate = true;
-    } else {
-      Serial.println("ERROR: SSID too long (max 31 chars)");
-    }
-  } else if (currentField == FIELD_PASSWORD) {
-    if (input.length() < sizeof(tempPassword)) {
-      memset(tempPassword, 0, sizeof(tempPassword));
-      strncpy(tempPassword, input.c_str(), sizeof(tempPassword) - 1);
-      tempPassword[sizeof(tempPassword) - 1] = '\0';
-      Serial.println("Password set (hidden)");
-      Serial.println("Touch 'Connect' button on display to apply");
-      displayNeedsUpdate = true;
-    } else {
-      Serial.println("ERROR: Password too long (max 63 chars)");
-    }
-  } else {
-    Serial.println("Type 'SSID' first, then enter network name");
-  }
-}
-
 void handleDisplayTouch() {
   unsigned long now = millis();
-  
-  // Handle serial input for WiFi setup
-  if (currentScreen == SCREEN_SETUP || currentScreen == SCREEN_SETTINGS) {
-    handleSerialWiFiSetup();
-  }
   
   // Check for touch
   if (!touch.touched()) {
@@ -591,10 +528,12 @@ void handleDisplayTouch() {
     case TAG_WIFI_CONFIG:
       Serial.println("WiFi Config button");
       Serial.println("\n=== WiFi Configuration ===");
-      Serial.println("Type 'SSID' and press Enter, then enter your SSID");
-      Serial.println("Type 'PASSWORD' and press Enter, then enter your password");
-      Serial.println("Then touch 'Connect' on screen");
-      currentField = FIELD_SSID;
+      Serial.println("Use Serial Monitor commands:");
+      Serial.println("  SETWIFI <ssid> <password>");
+      Serial.println("  Example: SETWIFI MyNetwork MyPass123");
+      Serial.println("  Then type: SAVE");
+      Serial.println("  Then restart to connect");
+      
       currentScreen = SCREEN_SETUP;
       displayNeedsUpdate = true;
       break;
@@ -604,13 +543,13 @@ void handleDisplayTouch() {
         Serial.println("Starting compass calibration");
         compassCalibrating = true;
         calibrationStartTime = millis();
-        startBackgroundCalibration();  // Compass module handles the work
+        startBackgroundCalibration();
         Serial.println("Rotate device through all orientations");
         Serial.println("Touch 'Stop Cal' when done (15+ seconds recommended)");
       } else {
         Serial.println("Stopping compass calibration");
         compassCalibrating = false;
-        stopBackgroundCalibration();  // Compass module processes and applies
+        stopBackgroundCalibration();
       }
       displayNeedsUpdate = true;
       break;
@@ -674,9 +613,8 @@ void handleDisplayTouch() {
       currentScreen = SCREEN_MAIN;
       displayNeedsUpdate = true;
       
-      // Connect WiFi and start web server
       Serial.println("WiFi credentials updated - connecting...");
-      initWebInterface();  // Call this to actually connect and start server
+      initWebInterface();
       break;
       
     case TAG_SETUP_SKIP:
@@ -690,6 +628,16 @@ void handleDisplayTouch() {
 
 void updateDisplay() {
   if (!displayNeedsUpdate) return;
+  
+  // Update tempSSID/tempPassword from global wifiSSID/wifiPassword
+  if (strlen(wifiSSID) > 0 && strlen(tempSSID) == 0) {
+    strncpy(tempSSID, wifiSSID, sizeof(tempSSID) - 1);
+    tempSSID[sizeof(tempSSID) - 1] = '\0';
+  }
+  if (strlen(wifiPassword) > 0 && strlen(tempPassword) == 0) {
+    strncpy(tempPassword, wifiPassword, sizeof(tempPassword) - 1);
+    tempPassword[sizeof(tempPassword) - 1] = '\0';
+  }
   
   switch (currentScreen) {
     case SCREEN_SETUP:

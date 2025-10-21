@@ -28,7 +28,7 @@
 #define INDEX_A            25
 
 // Emergency Stop Pin (active low with internal pullup)
-#define EMERGENCY_STOP_PIN 15
+#define EMERGENCY_STOP_PIN 23  // GP23 (joystick button)
 
 // GPS Serial (UART0)
 #define GPS_RX             1   // GP1 Pin 2 (UART0 RX)
@@ -52,19 +52,18 @@
 // Hardware Buttons (4 momentary switches on LCD module)
 #define BUTTON_1_PIN       20  // GP20 Pin 26
 #define BUTTON_2_PIN       21  // GP21 Pin 27
-#define BUTTON_3_PIN       22  // GP22 Pin 29
-#define BUTTON_4_PIN       26  // GP26 Pin 31
+#define BUTTON_3_PIN       15  // GP15 Pin 20
+#define BUTTON_4_PIN       29  // GP29 Pin 35
 
 // WS2812 LED Ring (50 LEDs)
-#define LED_DATA_PIN       27  // GP27 Pin 32
+#define LED_DATA_PIN       28  // GP28 Pin 34
 
-// Analog Joystick (X/Y with push button)
-#define JOYSTICK_X_PIN     28  // GP28 Pin 34 (ADC2)
-#define JOYSTICK_Y_PIN     29  // GP29 Pin 35 (ADC3)
-#define JOYSTICK_BTN_PIN   23  // GP23 Pin 30 (Digital)
+// Analog Joystick (X/Y only, button used for E-Stop)
+#define JOYSTICK_X_PIN     26  // GP26 (ADC0) Pin 31
+#define JOYSTICK_Y_PIN     27  // GP27 (ADC1) Pin 32
 
 // SD Card (SPI, shares bus with display)
-#define SD_CS_PIN          22  // GP22 Pin 29 (can be moved if conflicts)
+#define SD_CS_PIN          22  // GP22 Pin 29
 
 // NOTE: Magnetometer and touch screen share I2C bus
 // This is OK because they have different I2C addresses:
@@ -78,9 +77,6 @@
 
 // Select your motor driver type (uncomment ONE)
 #define MOTOR_DRIVER_TB6612FNG
-// #define MOTOR_DRIVER_TB6612FNG
-// #define MOTOR_DRIVER_DRV8833
-// #define MOTOR_DRIVER_GENERIC
 
 #ifdef MOTOR_DRIVER_L298N
   #define MOTOR_USE_ENABLE_PINS true

@@ -76,7 +76,7 @@ void handleRoot() {
   html += "    document.getElementById('targetEl').textContent=d.tgtEl.toFixed(2)+'°';";
   html += "  }).catch(e=>console.log('Update failed',e));";
   html += "}";
-  html += "setInterval(updateStatus,1000);"; // Update every 1 second
+  html += "setInterval(updateStatus,1000);";
   html += "window.onload=updateStatus;";
   html += "</script>";
   
@@ -194,15 +194,15 @@ void handleTLE() {
   strncpy(tleLine2, line2.c_str(), sizeof(tleLine2) - 1);
   tleLine2[sizeof(tleLine2) - 1] = '\0';
   
-  // Memory barrier to ensure all writes complete before setting flag
-  // This prevents Core 1 from seeing tleUpdatePending=true before
-  // the TLE data is fully written
+  // Memory barrier
   __dmb();
   
   tleUpdatePending = true;
   
   server.send(200, "text/plain", "TLE updated - Core 1 will initialize tracking");
-  Serial.println("TLE received, signaling Core 1");
+  
+  Serial.print("TLE updated via web: ");
+  Serial.println(satelliteName);
 }
 
 void handleHome() {
@@ -217,6 +217,8 @@ void handleHome() {
   delay(100);
   homeAxes();
   server.send(200, "text/plain", "Homing complete");
+  
+  Serial.println("Home command via web");
 }
 
 void handleStop() {
@@ -228,6 +230,8 @@ void handleStop() {
   trackerState.tracking = false;
   stopAllMotors();
   server.send(200, "text/plain", "Tracking stopped");
+  
+  Serial.println("Stop command via web");
 }
 
 void handleNotFound() {
@@ -239,8 +243,8 @@ void initWebInterface() {
   
   // Only connect if WiFi is configured
   if (!wifiConfigured || strlen(wifiSSID) == 0) {
-    Serial.println("WiFi not configured - skipping connection");
-    Serial.println("Use display setup screen to configure WiFi");
+    Serial.println("WiFi not configured - skipping");
+    Serial.println("Use: SETWIFI <ssid> <password>");
     return;
   }
   
@@ -256,27 +260,25 @@ void initWebInterface() {
   }
   
   if (WiFi.status() == WL_CONNECTED) {
-
     // Start mDNS
     if (MDNS.begin("sattracker")) {
-      Serial.println("mDNS responder started");
-      Serial.println("Access at: http://sattracker.local");
+      Serial.println("mDNS started: http://sattracker.local");
       MDNS.addService("http", "tcp", 80);
     }
 
     Serial.println("\nWiFi connected!");
-    Serial.print("IP Address: ");
+    Serial.print("IP: ");
     Serial.println(WiFi.localIP());
-    Serial.println("Default credentials: admin / changeme");
+    Serial.println("Login: admin / changeme");
     Serial.println("CHANGE THE PASSWORD!");
   } else {
     Serial.println("\nWiFi connection failed");
-    Serial.println("Check credentials on display setup screen");
     wifiConfigured = false;
     return;
   }
   
   server.on("/", handleRoot);
+  server.on("/status", handleStatus);
   server.on("/tle", HTTP_POST, handleTLE);
   server.on("/home", HTTP_POST, handleHome);
   server.on("/stop", HTTP_POST, handleStop);
@@ -289,7 +291,7 @@ void initWebInterface() {
 void handleWebClient() {
   // Only handle web requests if WiFi is connected
   if (WiFi.status() == WL_CONNECTED) {
-    MDNS.update();  // Keep mDNS alive
+    MDNS.update();
     server.handleClient();
   }
 }
