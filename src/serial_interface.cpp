@@ -496,10 +496,9 @@ static void processCommand(const char* input) {
       int mode = atoi(cmd.args);
       handleLedMode(mode);
     }
-    
   }
   else if (commandMatches(cmd.command, "LEDINFO")) {
-    handleLedPrintInfo();
+    handleLedInfo();
   }
   else {
     Serial.print(F("Unknown command: "));
@@ -1267,13 +1266,12 @@ void handleLedMode(int mode) {
   }
 }
 
-void handleLedPrintInfo() {
+void handleLedInfo() {
   Serial.print("Current mode: ");
   Serial.println((int)getLEDMode());
   Serial.print("Brightness: ");
-  Serial.println(globalBrightness);
+  Serial.println(getLEDBrightness());
   Serial.print("Buffer[0]: 0x");
-  Serial.println(ledBuffer[0], HEX);
+  uint32_t bufferZero = getLEDBuffer()[0];
+  Serial.println(bufferZero, HEX);
 }
-
-

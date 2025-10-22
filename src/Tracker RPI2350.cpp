@@ -166,7 +166,7 @@ void loop() {
   
   // Update LED ring (20 Hz)
   if (now - lastLEDUpdate >= 50) {
-    //updateLEDs();
+    updateLEDs();
     lastLEDUpdate = now;
   }
   

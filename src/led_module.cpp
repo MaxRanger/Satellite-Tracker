@@ -6,8 +6,9 @@
 #include "hardware/clocks.h"
 
 // LED configuration
+
 #define NUM_LEDS 24
-#define LED_BRIGHTNESS_DEFAULT 128  // 0-255, 50% brightness
+#define LED_BRIGHTNESS_DEFAULT 32  // 0-255, 50% brightness
 
 // PIO configuration
 static PIO led_pio = pio1;  // Use PIO1 (PIO0 used by encoders)
@@ -193,7 +194,7 @@ void initLEDs() {
   // pushToLEDs();
   // delay(100);
 
-  ledBuffer[0] = applyBrightness(255, 0, 0);
+  ledBuffer[0] = applyBrightness(128, 0, 0);
   Serial.println("Test: Setting first LED to red");
   pushToLEDs();
   delay(1000);
@@ -225,6 +226,10 @@ void setLEDMode(LEDMode mode) {
 
 LEDMode getLEDMode() {
   return currentMode;
+}
+
+uint32_t* getLEDBuffer() {
+  return ledBuffer;
 }
 
 void updateLEDs() {
@@ -311,6 +316,57 @@ void setLEDBrightness(uint8_t brightness) {
   globalBrightness = brightness;
 }
 
+uint8_t getLEDBrightness() {
+  return globalBrightness;
+}
+
 void showLEDs() {
   pushToLEDs();
+}
+
+void testLEDs() {
+  Serial.println("\n=== LED Ring Test ===");
+  
+  // Test 1: All red
+  Serial.println("Test 1: All LEDs red");
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ledBuffer[i] = applyBrightness(globalBrightness, 0, 0);
+  }
+  pushToLEDs();
+  delay(1000);
+  
+  // Test 2: All green
+  Serial.println("Test 2: All LEDs green");
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ledBuffer[i] = applyBrightness(0, globalBrightness, 0);
+  }
+  pushToLEDs();
+  delay(1000);
+  
+  // Test 3: All blue
+  Serial.println("Test 3: All LEDs blue");
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ledBuffer[i] = applyBrightness(0, 0, globalBrightness);
+  }
+  pushToLEDs();
+  delay(1000);
+  
+  // Test 4: Chase pattern
+  Serial.println("Test 4: Chase pattern");
+  for (int j = 0; j < NUM_LEDS; j++) {
+    for (int i = 0; i < NUM_LEDS; i++) {
+      ledBuffer[i] = (i == j) ? applyBrightness(globalBrightness, globalBrightness, globalBrightness) : 0;
+    }
+    pushToLEDs();
+    delay(50);
+  }
+  
+  // Test 5: All off
+  Serial.println("Test 5: All LEDs off");
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ledBuffer[i] = 0;
+  }
+  pushToLEDs();
+  
+  Serial.println("LED test complete");
 }

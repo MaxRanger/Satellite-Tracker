@@ -78,4 +78,8 @@ void printRawJoystickData(int samples);
 void printEncoderCounts();
 void streamGPSData(unsigned long duration);
 
+// LED Funtions
+void handleLedTest();
+void handleLedMode(int mode);
+void handleLedInfo();
 #endif // SERIAL_INTERFACE_H
