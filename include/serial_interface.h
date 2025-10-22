@@ -80,6 +80,6 @@ void streamGPSData(unsigned long duration);
 
 // LED Funtions
 void handleLedTest();
-void handleLedMode(const char* mode);
+void handleLedMode(int mode);
 void handleLedInfo();
 #endif // SERIAL_INTERFACE_H

@@ -15,6 +15,8 @@ extern volatile bool tleUpdatePending;
 extern char wifiSSID[32];
 extern char wifiPassword[64];
 extern bool wifiConfigured;
+void setLEDMode(LEDMode mode);
+extern LEDMode getLEDMode();
 
 // Command buffer
 static char cmdBuffer[SERIAL_BUFFER_SIZE];
@@ -494,7 +496,10 @@ static void processCommand(const char* input) {
     handleLedTest();
   }
   else if (commandMatches(cmd.command, "LEDMODE")) {
-    handleLedMode(cmd.args);
+    if (strlen(cmd.args) > 0) {
+      int mode = atoi(cmd.args);
+      handleLedMode(mode);
+    }
   }
   else if (commandMatches(cmd.command, "LEDINFO")) {
     handleLedInfo();
@@ -1257,9 +1262,8 @@ void handleLedTest() {
   testLEDs();
 }
 
-void handleLedMode(const char* modeString) {
-  if (strlen(modeString) > 0) {
-    int mode = atoi(modeString);
+void handleLedMode(int mode) {
+  if (mode > 0 && mode < LED_MODE_CUSTOM) {
     if (mode >= 0 && mode <= 6) {
       setLEDMode((LEDMode)mode);
       Serial.print(F("LED mode set to: "));

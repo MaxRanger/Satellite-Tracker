@@ -44,8 +44,8 @@ char tempPassword[64] = "";
 bool compassCalibrating = false;
 unsigned long calibrationStartTime = 0;
 
-bool keyboardVisible = false;
-bool shiftActive = false;
+static bool keyboardVisible = false;
+static bool shiftActive = false;
 static const char keyboardChars[] = "1234567890qwertyuiopasdfghjklzxcvbnm ";
 static const char keyboardCharsShift[] = "!@#$%^&*()QWERTYUIOPASDFGHJKLZXCVBNM ";
 
