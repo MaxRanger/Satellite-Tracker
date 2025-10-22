@@ -1,8 +1,9 @@
 // ============================================================================
-// web_interface.cpp
+// web_interface.cpp - FIXED: Secure credential storage
 // ============================================================================
 
 #include "web_interface.h"
+#include "storage_module.h"  // Added for secure storage
 #include <LEAmDNS.h>
 
 // External references to shared data (defined in shared_data.cpp)
@@ -19,9 +20,14 @@ extern bool wifiConfigured;
 
 WebServer server(80);
 
-// Authentication credentials (TODO: Move to EEPROM/config)
-const char* www_username = "admin";
-const char* www_password = "changeme";  // Change this!
+// Credentials are loaded from flash storage on initialization
+char www_username[32] = "";
+char www_password[64] = "";
+bool credentialsConfigured = false;
+
+// Default credentials for first-time setup only
+const char* DEFAULT_USERNAME = "admin";
+const char* DEFAULT_PASSWORD = "setup";  // Temporary, must be changed
 
 // HTML sanitization to prevent XSS
 String sanitizeHTML(const String& input) {
@@ -32,6 +38,64 @@ String sanitizeHTML(const String& input) {
   output.replace("\"", "&quot;");
   output.replace("'", "&#39;");
   return output;
+}
+
+bool loadWebCredentials() {
+  StorageConfig config = {0};
+  
+  if (!loadConfig(&config)) {
+    Serial.println("No saved web credentials - using defaults");
+    strncpy(www_username, DEFAULT_USERNAME, sizeof(www_username) - 1);
+    strncpy(www_password, DEFAULT_PASSWORD, sizeof(www_password) - 1);
+    credentialsConfigured = false;
+    return false;
+  }
+  
+  // Check if web credentials are stored
+  if (strlen(config.webUsername) > 0 && strlen(config.webPassword) > 0) {
+    strncpy(www_username, config.webUsername, sizeof(www_username) - 1);
+    strncpy(www_password, config.webPassword, sizeof(www_password) - 1);
+    www_username[sizeof(www_username) - 1] = '\0';
+    www_password[sizeof(www_password) - 1] = '\0';
+    credentialsConfigured = true;
+    Serial.println("Web credentials loaded from storage");
+    return true;
+  }
+  
+  // Use defaults if not configured
+  strncpy(www_username, DEFAULT_USERNAME, sizeof(www_username) - 1);
+  strncpy(www_password, DEFAULT_PASSWORD, sizeof(www_password) - 1);
+  credentialsConfigured = false;
+  Serial.println("Using default credentials - PLEASE CHANGE!");
+  return false;
+}
+
+bool saveWebCredentials(const char* username, const char* password) {
+  StorageConfig config = {0};
+  loadConfig(&config);
+  
+  // Update web credentials
+  strncpy(config.webUsername, username, sizeof(config.webUsername) - 1);
+  config.webUsername[sizeof(config.webUsername) - 1] = '\0';
+  
+  strncpy(config.webPassword, password, sizeof(config.webPassword) - 1);
+  config.webPassword[sizeof(config.webPassword) - 1] = '\0';
+  
+  // Save to storage
+  if (saveConfig(&config)) {
+    // Update runtime variables
+    strncpy(www_username, username, sizeof(www_username) - 1);
+    strncpy(www_password, password, sizeof(www_password) - 1);
+    www_username[sizeof(www_username) - 1] = '\0';
+    www_password[sizeof(www_password) - 1] = '\0';
+    credentialsConfigured = true;
+    
+    Serial.println("Web credentials saved successfully");
+    return true;
+  }
+  
+  Serial.println("Failed to save web credentials");
+  return false;
 }
 
 void handleRoot() {
@@ -50,11 +114,12 @@ void handleRoot() {
   html += "<style>body{font-family:Arial;margin:20px;background:#f0f0f0;}";
   html += "table{border-collapse:collapse;background:white;}td,th{border:1px solid #ddd;padding:8px;}";
   html += "th{background:#4CAF50;color:white;}";
-  html += "input[type=text]{width:500px;max-width:100%;padding:5px;}";
+  html += "input[type=text],input[type=password]{width:500px;max-width:100%;padding:5px;}";
   html += "input[type=submit]{background:#4CAF50;color:white;padding:10px 20px;border:none;cursor:pointer;margin:5px;}";
   html += "input[type=submit]:hover{background:#45a049;}";
   html += ".status-good{color:green;font-weight:bold;}";
   html += ".status-bad{color:red;font-weight:bold;}";
+  html += ".warning{background:#ffeb3b;padding:10px;margin:10px 0;border-left:4px solid #ff9800;}";
   html += "h1,h2{color:#333;}</style>";
   
   // JavaScript for AJAX updates
@@ -82,6 +147,11 @@ void handleRoot() {
   
   html += "</head><body>";
   html += "<h1>Satellite Tracker Control</h1>";
+  
+  if (!credentialsConfigured) {
+    html += "<div class='warning'><strong>⚠️ Security Warning:</strong> You are using default credentials. ";
+    html += "Please change your password immediately using the form below!</div>";
+  }
   
   html += "<h2>Status</h2><table>";
   html += "<tr><td>GPS Valid</td><td id='gpsValid'>...</td></tr>";
@@ -111,6 +181,15 @@ void handleRoot() {
   
   html += "<form action='/stop' method='POST'>";
   html += "<input type='submit' value='Stop Tracking'></form>";
+  
+  // FIXED: Add password change form
+  html += "<h2>Change Web Password</h2>";
+  html += "<form action='/changepass' method='POST'>";
+  html += "Current Password: <input type='password' name='oldpass' required><br><br>";
+  html += "New Username: <input type='text' name='newuser' value='" + String(www_username) + "' maxlength='31'><br><br>";
+  html += "New Password: <input type='password' name='newpass' required minlength='8' maxlength='63'><br><br>";
+  html += "Confirm Password: <input type='password' name='confirm' required minlength='8' maxlength='63'><br><br>";
+  html += "<input type='submit' value='Change Credentials'></form>";
   
   html += "</body></html>";
   
@@ -181,6 +260,11 @@ void handleTLE() {
     return;
   }
   
+  if (line1.length() >= sizeof(tleLine1) || line2.length() >= sizeof(tleLine2)) {
+    server.send(400, "text/plain", "TLE data too long");
+    return;
+  }
+  
   // Safe copy with bounds checking and null termination
   memset(satelliteName, 0, sizeof(satelliteName));
   strncpy(satelliteName, name.c_str(), sizeof(satelliteName) - 1);
@@ -203,6 +287,71 @@ void handleTLE() {
   
   Serial.print("TLE updated via web: ");
   Serial.println(satelliteName);
+}
+
+void handleChangePassword() {
+  // Require authentication with current password
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication();
+  }
+  
+  if (!server.hasArg("oldpass") || !server.hasArg("newuser") || 
+      !server.hasArg("newpass") || !server.hasArg("confirm")) {
+    server.send(400, "text/plain", "Missing parameters");
+    return;
+  }
+  
+  String oldPass = server.arg("oldpass");
+  String newUser = server.arg("newuser");
+  String newPass = server.arg("newpass");
+  String confirm = server.arg("confirm");
+  
+  // Verify current password
+  if (oldPass != String(www_password)) {
+    server.send(403, "text/plain", "Current password incorrect");
+    return;
+  }
+  
+  // Validate new username
+  if (newUser.length() == 0 || newUser.length() >= 32) {
+    server.send(400, "text/plain", "Invalid username (1-31 chars)");
+    return;
+  }
+  
+  // Validate new password
+  if (newPass.length() < 8 || newPass.length() >= 64) {
+    server.send(400, "text/plain", "Invalid password (8-63 chars)");
+    return;
+  }
+  
+  // Check password confirmation
+  if (newPass != confirm) {
+    server.send(400, "text/plain", "Passwords do not match");
+    return;
+  }
+  
+  // Check password strength (basic check)
+  bool hasUpper = false, hasLower = false, hasDigit = false;
+  for (char c : newPass) {
+    if (isupper(c)) hasUpper = true;
+    if (islower(c)) hasLower = true;
+    if (isdigit(c)) hasDigit = true;
+  }
+  
+  if (!hasUpper || !hasLower || !hasDigit) {
+    server.send(400, "text/plain", 
+                "Password must contain uppercase, lowercase, and digit");
+    return;
+  }
+  
+  // Save new credentials
+  if (saveWebCredentials(newUser.c_str(), newPass.c_str())) {
+    server.send(200, "text/plain", "Credentials changed successfully. Please log in again.");
+    Serial.println("Web credentials changed successfully");
+  } else {
+    server.send(500, "text/plain", "Failed to save credentials");
+    Serial.println("Failed to save new web credentials");
+  }
 }
 
 void handleHome() {
@@ -241,6 +390,8 @@ void handleNotFound() {
 void initWebInterface() {
   Serial.println("Initializing web interface...");
   
+  loadWebCredentials();
+  
   // Only connect if WiFi is configured
   if (!wifiConfigured || strlen(wifiSSID) == 0) {
     Serial.println("WiFi not configured - skipping");
@@ -269,8 +420,17 @@ void initWebInterface() {
     Serial.println("\nWiFi connected!");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
-    Serial.println("Login: admin / changeme");
-    Serial.println("CHANGE THE PASSWORD!");
+    
+    if (credentialsConfigured) {
+      Serial.println("Login with your configured credentials");
+    } else {
+      Serial.println("⚠️ WARNING: Using default credentials!");
+      Serial.print("Login: ");
+      Serial.print(www_username);
+      Serial.print(" / ");
+      Serial.println(www_password);
+      Serial.println("CHANGE PASSWORD IMMEDIATELY!");
+    }
   } else {
     Serial.println("\nWiFi connection failed");
     wifiConfigured = false;
@@ -282,6 +442,7 @@ void initWebInterface() {
   server.on("/tle", HTTP_POST, handleTLE);
   server.on("/home", HTTP_POST, handleHome);
   server.on("/stop", HTTP_POST, handleStop);
+  server.on("/changepass", HTTP_POST, handleChangePassword);
   server.onNotFound(handleNotFound);
   server.begin();
   

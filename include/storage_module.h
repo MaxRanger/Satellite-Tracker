@@ -23,6 +23,9 @@ struct StorageConfig {
   char wifiPassword[64];
   bool wifiConfigured;
   
+  char webUsername[32];
+  char webPassword[64];
+  
   // Compass calibration
   int compassMinX, compassMaxX;
   int compassMinY, compassMaxY;
