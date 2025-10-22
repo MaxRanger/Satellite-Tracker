@@ -15,6 +15,7 @@
 #include "motor_control.h"
 #include "storage_module.h"
 #include "web_interface.h"
+#include "led_module.h"
 
 // Command buffer size
 #define SERIAL_BUFFER_SIZE 128

@@ -6,7 +6,7 @@
 #include "hardware/clocks.h"
 
 // LED configuration
-#define NUM_LEDS 50
+#define NUM_LEDS 24
 #define LED_BRIGHTNESS_DEFAULT 128  // 0-255, 50% brightness
 
 // PIO configuration
@@ -171,6 +171,10 @@ void animateRainbow() {
 void initLEDs() {
   Serial.println("Initializing WS2812 LED ring...");
   
+  // Check if PIO is available
+  Serial.printf("  PIO%d available: ", led_pio == pio0 ? 0 : 1);
+  Serial.println(pio_can_add_program(led_pio, &ws2812_program) ? "YES" : "NO");
+
   // Load PIO program
   uint offset = pio_add_program(led_pio, &ws2812_program);
   
@@ -186,7 +190,13 @@ void initLEDs() {
   currentMode = LED_MODE_STEADY_GREEN;
   
   // Push initial state to LEDs
+  // pushToLEDs();
+  // delay(100);
+
+  ledBuffer[0] = applyBrightness(255, 0, 0);
+  Serial.println("Test: Setting first LED to red");
   pushToLEDs();
+  delay(1000);
   
   Serial.println("WS2812 LED ring initialized");
   Serial.printf("  LEDs: %d\n", NUM_LEDS);

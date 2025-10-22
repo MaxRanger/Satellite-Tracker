@@ -15,6 +15,8 @@ extern volatile bool tleUpdatePending;
 extern char wifiSSID[32];
 extern char wifiPassword[64];
 extern bool wifiConfigured;
+void setLEDMode(LEDMode mode);
+extern LEDMode getLEDMode();
 
 // Command buffer
 static char cmdBuffer[SERIAL_BUFFER_SIZE];
@@ -485,6 +487,19 @@ static void processCommand(const char* input) {
   }
   else if (commandMatches(cmd.command, "STREAM")) {
     handleStreamCommand(cmd.args);
+  }
+  else if (commandMatches(cmd.command, "LEDTEST")) {
+    handleLedTest();
+  }
+  else if (commandMatches(cmd.command, "LEDMODE")) {
+    if (strlen(cmd.args) > 0) {
+      int mode = atoi(cmd.args);
+      handleLedMode(mode);
+    }
+    
+  }
+  else if (commandMatches(cmd.command, "LEDINFO")) {
+    handleLedPrintInfo();
   }
   else {
     Serial.print(F("Unknown command: "));
@@ -1239,3 +1254,26 @@ void streamGPSData(unsigned long duration) {
   // GPS data will be printed by GPS module's dumpGPSData()
   // The stream will continue until duration expires or key pressed
 }
+
+void handleLedTest() {
+  testLEDs();
+}
+
+void handleLedMode(int mode) {
+  if (mode > 0 && mode < LED_MODE_CUSTOM) {
+    setLEDMode((LEDMode)mode);
+    Serial.print("LED mode set to: ");
+    Serial.println(mode);
+  }
+}
+
+void handleLedPrintInfo() {
+  Serial.print("Current mode: ");
+  Serial.println((int)getLEDMode());
+  Serial.print("Brightness: ");
+  Serial.println(globalBrightness);
+  Serial.print("Buffer[0]: 0x");
+  Serial.println(ledBuffer[0], HEX);
+}
+
+
