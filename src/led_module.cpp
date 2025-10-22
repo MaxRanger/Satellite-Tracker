@@ -6,7 +6,7 @@
 #include "hardware/clocks.h"
 
 // LED configuration
-#define NUM_LEDS 24
+#define NUM_LEDS 1
 #define LED_BRIGHTNESS_DEFAULT 32  // 0-255, 50% brightness
 
 // PIO configuration
@@ -168,30 +168,44 @@ void animateRainbow() {
 // PUBLIC API IMPLEMENTATION
 // ============================================================================
 
-void initLEDs() {
-  Serial.println("Initializing WS2812 LED ring...");
+void initLEDs() {  Serial.println("Initializing WS2812 LED ring...");
+  
+  // Check if PIO is available
+  Serial.print("PIO1 available: ");
+  Serial.println(pio_can_add_program(led_pio, &ws2812_program) ? "YES" : "NO");
   
   // Load PIO program
   uint offset = pio_add_program(led_pio, &ws2812_program);
+  Serial.print("PIO program loaded at offset: ");
+  Serial.println(offset);
   
+  // Initialize PIO for WS2812 (400kHz - try this if 800kHz doesn't work)
+  ws2812_program_init(led_pio, led_sm, offset, LED_DATA_PIN, 400000);
   // Initialize PIO for WS2812 (800kHz)
-  ws2812_program_init(led_pio, led_sm, offset, LED_DATA_PIN, 800000);
+  //ws2812_program_init(led_pio, led_sm, offset, LED_DATA_PIN, 800000);
+  Serial.print("PIO initialized on pin: ");
+  Serial.println(LED_DATA_PIN);
   
   // Clear LED buffer
   for (int i = 0; i < NUM_LEDS; i++) {
     ledBuffer[i] = 0;
   }
   
-  // Set initial mode
-  currentMode = LED_MODE_STEADY_GREEN;
+  // Test: Set first LED to red
+  ledBuffer[0] = applyBrightness(255, 0, 0);
+  Serial.println("Test: Setting first LED to red");
   
   // Push initial state to LEDs
   pushToLEDs();
+  delay(100);
   
   Serial.println("WS2812 LED ring initialized");
   Serial.printf("  LEDs: %d\n", NUM_LEDS);
   Serial.printf("  Data pin: GPIO %d\n", LED_DATA_PIN);
   Serial.printf("  PIO: %d, SM: %d\n", led_pio == pio0 ? 0 : 1, led_sm);
+  
+  // Set initial mode
+  currentMode = LED_MODE_STEADY_GREEN;
 }
 
 void setLEDMode(LEDMode mode) {
@@ -316,9 +330,11 @@ void showLEDs() {
 void testLEDs() {
   Serial.println("\n=== LED Ring Test ===");
   
+  int numLeds = 1;// NUM_LEDS;
+
   // Test 1: All red
   Serial.println("Test 1: All LEDs red");
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < numLeds; i++) {
     ledBuffer[i] = applyBrightness(globalBrightness, 0, 0);
   }
   pushToLEDs();
@@ -326,7 +342,7 @@ void testLEDs() {
   
   // Test 2: All green
   Serial.println("Test 2: All LEDs green");
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < numLeds; i++) {
     ledBuffer[i] = applyBrightness(0, globalBrightness, 0);
   }
   pushToLEDs();
@@ -334,7 +350,7 @@ void testLEDs() {
   
   // Test 3: All blue
   Serial.println("Test 3: All LEDs blue");
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < numLeds; i++) {
     ledBuffer[i] = applyBrightness(0, 0, globalBrightness);
   }
   pushToLEDs();
@@ -342,8 +358,8 @@ void testLEDs() {
   
   // Test 4: Chase pattern
   Serial.println("Test 4: Chase pattern");
-  for (int j = 0; j < NUM_LEDS; j++) {
-    for (int i = 0; i < NUM_LEDS; i++) {
+  for (int j = 0; j < numLeds; j++) {
+    for (int i = 0; i < numLeds; i++) {
       ledBuffer[i] = (i == j) ? applyBrightness(globalBrightness, globalBrightness, globalBrightness) : 0;
     }
     pushToLEDs();
@@ -352,7 +368,7 @@ void testLEDs() {
   
   // Test 5: All off
   Serial.println("Test 5: All LEDs off");
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < numLeds; i++) {
     ledBuffer[i] = 0;
   }
   pushToLEDs();

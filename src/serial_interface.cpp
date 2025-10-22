@@ -1,5 +1,5 @@
 // ============================================================================
-// serial_interface.cpp - Serial command interface implementation
+// serial_interface.cpp
 // ============================================================================
 
 #include "serial_interface.h"
@@ -134,6 +134,9 @@ static void handleHelpCommand() {
   Serial.println(F("  RAWJOY <n>   - Print n joystick readings"));
   Serial.println(F("  ENCODER      - Print encoder counts"));
   Serial.println(F("  STREAM <sec> - Stream GPS data for n seconds"));
+  Serial.println(F("  LEDTEST      - Run LED ring test sequence"));
+  Serial.println(F("  LEDMODE <n>  - Set LED mode (0-6)"));
+  Serial.println(F("  LEDINFO      - Show LED status"));
   Serial.println();
   
   Serial.println(F("Other:"));
@@ -487,6 +490,7 @@ static void processCommand(const char* input) {
     handleStreamCommand(cmd.args);
   }
   else if (commandMatches(cmd.command, "LEDTEST")) {
+    Serial.println(F("Running LED test..."));
     handleLedTest();
   }
   else if (commandMatches(cmd.command, "LEDMODE")) {
@@ -509,7 +513,7 @@ static void processCommand(const char* input) {
 void initSerialInterface() {
   Serial.println(F("\n=== Serial Interface Initialized ==="));
   Serial.println(F("Type HELP for available commands"));
-  Serial.println();
+  Serial.print(F("> "));
   
   cmdBufferPos = 0;
   memset(cmdBuffer, 0, sizeof(cmdBuffer));
@@ -574,7 +578,7 @@ void updateSerialInterface() {
 
 void printBanner() {
   Serial.println(F("\n"));
-   Serial.println(F("\n\n"));
+  Serial.println(F("\n\n"));
   Serial.println(F("╔═════════════════════════════════════╗"));
   Serial.println(F("║   RP2350 Satellite Tracker System   ║"));
   Serial.printf (  "║    build: %s - %s    ║\r\n", __DATE__, __TIME__); // Mmm dd yyyy - hh:mm:ss (22 characters)
@@ -1072,7 +1076,7 @@ void beginJoystickCalibration() {
   Serial.println(F("3. Type CALJOYSTOP when done"));
   Serial.println();
   
-  beginJoystickCalibration();
+  startJoystickCalibration();
 }
 
 void endJoystickCalibration() {
@@ -1128,7 +1132,7 @@ void beginEmergencyStop() {
 }
 
 void beginResetEmergencyStop() {
-  ::beginResetEmergencyStop(); // Call motor control function
+  ::resetEmergencyStop(); // Call motor control function
 }
 
 void setTLE(const char* name, const char* line1, const char* line2) {
@@ -1249,26 +1253,45 @@ void streamGPSData(unsigned long duration) {
   // The stream will continue until duration expires or key pressed
 }
 
-
 void handleLedTest() {
   testLEDs();
 }
 
 void handleLedMode(const char* modeString) {
-  if (strlen(modeString) > 0 && strlen(modeString) < 3) {
+  if (strlen(modeString) > 0) {
     int mode = atoi(modeString);
-    setLEDMode((LEDMode)mode);
-    Serial.print("LED mode set to: ");
-    Serial.println(mode);
+    if (mode >= 0 && mode <= 6) {
+      setLEDMode((LEDMode)mode);
+      Serial.print(F("LED mode set to: "));
+      Serial.println(mode);
+    } else {
+      Serial.println(F("ERROR: Mode must be 0-6"));
+      Serial.println(F("  0=OFF, 1=GREEN, 2=PURPLE, 3=RED, 4=YELLOW, 5=BLUE, 6=RAINBOW"));
+    }
+  } else {
+    Serial.println(F("ERROR: Usage: LEDMODE <0-6>"));
   }
 }
 
 void handleLedInfo() {
-  Serial.print("Current mode: ");
-  Serial.println((int)getLEDMode());
+  Serial.println(F("\n=== LED Ring Status ==="));
   Serial.print("Brightness: ");
   Serial.println(getLEDBrightness());
   Serial.print("Buffer[0]: 0x");
   uint32_t bufferZero = getLEDBuffer()[0];
   Serial.println(bufferZero, HEX);
+    Serial.print(F("Current mode: "));
+    Serial.println((int)getLEDMode());
+    Serial.print(F("Mode name: "));
+    switch(getLEDMode()) {
+      case LED_MODE_OFF: Serial.println(F("OFF")); break;
+      case LED_MODE_STEADY_GREEN: Serial.println(F("STEADY_GREEN")); break;
+      case LED_MODE_STEADY_PURPLE: Serial.println(F("STEADY_PURPLE")); break;
+      case LED_MODE_FLASH_RED: Serial.println(F("FLASH_RED")); break;
+      case LED_MODE_FLASH_YELLOW: Serial.println(F("FLASH_YELLOW")); break;
+      case LED_MODE_FLASH_BLUE: Serial.println(F("FLASH_BLUE")); break;
+      case LED_MODE_RAINBOW: Serial.println(F("RAINBOW")); break;
+      default: Serial.println(F("UNKNOWN")); break;
+    }
+    Serial.println();
 }
