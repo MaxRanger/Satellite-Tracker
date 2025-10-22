@@ -44,9 +44,8 @@ char tempPassword[64] = "";
 bool compassCalibrating = false;
 unsigned long calibrationStartTime = 0;
 
-// Forward declarations
-static bool keyboardVisible = false;
-static bool shiftActive = false;
+bool keyboardVisible = false;
+bool shiftActive = false;
 static const char keyboardChars[] = "1234567890qwertyuiopasdfghjklzxcvbnm ";
 static const char keyboardCharsShift[] = "!@#$%^&*()QWERTYUIOPASDFGHJKLZXCVBNM ";
 
@@ -159,10 +158,10 @@ void drawSetupScreen() {
   
   // Smaller buttons to make room for keyboard
   Button buttons[4] = {
-    {10, 80, 60, 28, TAG_FIELD_SSID, "SSID", (uint16_t)(currentField == FIELD_SSID ? CYAN : BLUE)},
-    {75, 80, 60, 28, TAG_FIELD_PASSWORD, "Pass", (uint16_t)(currentField == currentField == FIELD_PASSWORD ? CYAN : BLUE)},
+    {10, 80, 60, 28, TAG_FIELD_SSID, "SSID", currentField == FIELD_SSID ? CYAN : BLUE},
+    {75, 80, 60, 28, TAG_FIELD_PASSWORD, "Pass", currentField == FIELD_PASSWORD ? CYAN : BLUE},
     {140, 80, 60, 28, TAG_KEYBOARD, "Keys", GREEN},
-    {205, 80, 50, 28, TAG_SETUP_CONNECT, "OK", (uint16_t)((strlen(tempSSID) > 0) ? GREEN : GRAY)}
+    {205, 80, 50, 28, TAG_SETUP_CONNECT, "OK", (strlen(tempSSID) > 0) ? GREEN : GRAY}
   };
   
   for (int i = 0; i < 4; i++) {
@@ -239,7 +238,7 @@ void drawKeyboard() {
   
   // Bottom row: Shift, Space, Backspace, Done
   Button bottomRow[4] = {
-    {5, 218, 45, 20, TAG_KB_SHIFT, "Shift", (uint16_t)(shiftActive ? ORANGE : GRAY)},
+    {5, 218, 45, 20, TAG_KB_SHIFT, "Shift", shiftActive ? ORANGE : GRAY},
     {55, 218, 120, 20, TAG_KB_SPACE, "Space", BLUE},
     {180, 218, 60, 20, TAG_KB_BACKSPACE, "Back", RED},
     {245, 218, 70, 20, TAG_KB_DONE, "Done", GREEN}
@@ -597,12 +596,10 @@ void handleDisplayTouch() {
       
     case TAG_KB_SPACE:
       if (currentField == FIELD_SSID && strlen(tempSSID) < sizeof(tempSSID) - 1) {
-        //strncat(tempSSID, " ", 1);
-        snprintf(tempSSID, sizeof(tempSSID), "%s", " ");
+        strncat(tempSSID, " ", 1);
         displayNeedsUpdate = true;
       } else if (currentField == FIELD_PASSWORD && strlen(tempPassword) < sizeof(tempPassword) - 1) {
-        //strncat(tempPassword, " ", 1);
-        snprintf(tempPassword, sizeof(tempPassword), "%s", " ");
+        strncat(tempPassword, " ", 1);
         displayNeedsUpdate = true;
       }
       break;

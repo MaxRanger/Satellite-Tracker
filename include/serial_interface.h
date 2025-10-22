@@ -15,6 +15,7 @@
 #include "motor_control.h"
 #include "storage_module.h"
 #include "web_interface.h"
+#include "led_module.h"
 
 // Command buffer size
 #define SERIAL_BUFFER_SIZE 128
@@ -77,4 +78,8 @@ void printRawJoystickData(int samples);
 void printEncoderCounts();
 void streamGPSData(unsigned long duration);
 
+// LED Funtions
+void handleLedTest();
+void handleLedMode(const char* mode);
+void handleLedInfo();
 #endif // SERIAL_INTERFACE_H

@@ -144,11 +144,11 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   
   // Set LED mode based on system state
-  // if (trackerState.gpsValid) {
-  //   setLEDMode(LED_MODE_STEADY_GREEN);
-  // } else {
-  //   setLEDMode(LED_MODE_FLASH_YELLOW);
-  // }
+  if (trackerState.gpsValid) {
+    setLEDMode(LED_MODE_STEADY_GREEN);
+  } else {
+    setLEDMode(LED_MODE_FLASH_YELLOW);
+  }
 }
 
 void loop() {
@@ -166,7 +166,7 @@ void loop() {
   
   // Update LED ring (20 Hz)
   if (now - lastLEDUpdate >= 50) {
-    //updateLEDs();
+    updateLEDs();
     lastLEDUpdate = now;
   }
   

@@ -486,6 +486,15 @@ static void processCommand(const char* input) {
   else if (commandMatches(cmd.command, "STREAM")) {
     handleStreamCommand(cmd.args);
   }
+  else if (commandMatches(cmd.command, "LEDTEST")) {
+    handleLedTest();
+  }
+  else if (commandMatches(cmd.command, "LEDMODE")) {
+    handleLedMode(cmd.args);
+  }
+  else if (commandMatches(cmd.command, "LEDINFO")) {
+    handleLedInfo();
+  }
   else {
     Serial.print(F("Unknown command: "));
     Serial.println(cmd.command);
@@ -1238,4 +1247,28 @@ void streamGPSData(unsigned long duration) {
   
   // GPS data will be printed by GPS module's dumpGPSData()
   // The stream will continue until duration expires or key pressed
+}
+
+
+void handleLedTest() {
+  testLEDs();
+}
+
+void handleLedMode(const char* modeString) {
+  if (strlen(modeString) > 0 && strlen(modeString) < 3) {
+    int mode = atoi(modeString);
+    setLEDMode((LEDMode)mode);
+    Serial.print("LED mode set to: ");
+    Serial.println(mode);
+  }
+}
+
+void handleLedInfo() {
+  Serial.print("Current mode: ");
+  Serial.println((int)getLEDMode());
+  Serial.print("Brightness: ");
+  Serial.println(getLEDBrightness());
+  Serial.print("Buffer[0]: 0x");
+  uint32_t bufferZero = getLEDBuffer()[0];
+  Serial.println(bufferZero, HEX);
 }

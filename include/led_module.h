@@ -42,6 +42,9 @@ void setLEDMode(LEDMode mode);
 // Get current LED mode
 LEDMode getLEDMode();
 
+// Get pointer to LED buffer for direct manipulation
+uint32_t* getLEDBuffer();
+
 // Update LEDs (call periodically from main loop - handles animations)
 void updateLEDs();
 
@@ -49,7 +52,9 @@ void updateLEDs();
 void setAllLEDs(RGBColor color);
 void setLED(uint8_t index, RGBColor color);
 void setLEDBrightness(uint8_t brightness); // 0-255
+uint8_t getLEDBrightness(); // Get current brightness
 void showLEDs(); // Push buffer to LEDs
+void testLEDs(); // Run LED test sequence
 
 // Helper functions for common colors
 RGBColor RGB(uint8_t r, uint8_t g, uint8_t b);
