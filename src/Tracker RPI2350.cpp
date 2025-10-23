@@ -1,6 +1,5 @@
 /*
  * Raspberry Pi Pico 2 (RP2350) Satellite Tracker - Main Program
- * Updated with Serial Interface Module
  */
 
 #include <Arduino.h>
@@ -12,7 +11,7 @@
 #include "display_module.h"
 #include "web_interface.h"
 #include "tracking_logic.h"
-#include "serial_interface.h"  // NEW: Serial command interface
+#include "serial_interface.h"
 #include "joystick_module.h"
 #include "button_module.h"
 #include "led_module.h"
@@ -76,11 +75,11 @@ void setup() {
   //initMotorControl();
   initCompass();
   //initGPS();
-  initJoystick();          // NEW: Initialize joystick
-  //initButtons();           // NEW: Initialize hardware buttons
-  initLEDs();              // NEW: Initialize LED ring
+  initJoystick();
+  //initButtons();
+  initLEDs();
   initDisplay();
-  initSerialInterface();   // NEW: Initialize serial command interface
+  initSerialInterface();
   
   // Load saved configuration
   if (isStorageAvailable()) {
@@ -165,7 +164,7 @@ void loop() {
   updatePulse();
   
   // Update LED ring (20 Hz)
-  if (now - lastLEDUpdate >= 50) {
+  if (now - lastLEDUpdate >= 150) {
     updateLEDs();
     lastLEDUpdate = now;
   }
