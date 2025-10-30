@@ -304,3 +304,71 @@ void calibrateCompass() {
                 minX, maxX, minY, maxY, minZ, maxZ);
   Serial.println();
 }
+
+
+void printCompassStatus() {
+  Serial.println(F("\n=== COMPASS STATUS ==="));
+  Serial.println();
+  
+  QMC5883LCompass& compass = getCompass();
+  compass.read();
+  
+  Serial.print(F("Calibrating:   "));
+  Serial.println(isBackgroundCalibrationActive() ? F("YES") : F("NO"));
+  
+  if (isBackgroundCalibrationActive()) {
+    Serial.printf("Duration:      %lu seconds\n", getCalibrationDuration());
+  }
+  
+  Serial.println();
+  Serial.print(F("Raw Values:"));
+  Serial.printf("\n  X: %d\n", compass.getX());
+  Serial.printf("  Y: %d\n", compass.getY());
+  Serial.printf("  Z: %d\n", compass.getZ());
+  
+  Serial.println();
+  float heading = readCompassHeading();
+  Serial.printf("Heading:       %.2f°\n", heading);
+  
+  // Cardinal direction
+  const char* direction;
+  if (heading < 22.5 || heading >= 337.5) direction = "N";
+  else if (heading < 67.5) direction = "NE";
+  else if (heading < 112.5) direction = "E";
+  else if (heading < 157.5) direction = "SE";
+  else if (heading < 202.5) direction = "S";
+  else if (heading < 247.5) direction = "SW";
+  else if (heading < 292.5) direction = "W";
+  else direction = "NW";
+  
+  Serial.print(F("Direction:     "));
+  Serial.println(direction);
+  
+  Serial.println();
+}
+
+void printRawCompassData(int samples) {
+  Serial.println(F("\n=== RAW COMPASS DATA ==="));
+  Serial.printf("Collecting %d samples...\n", samples);
+  Serial.println();
+  Serial.println(F("Sample    X       Y       Z     Heading"));
+  Serial.println(F("------  ------  ------  ------  -------"));
+  
+  QMC5883LCompass& compass = getCompass();
+  
+  for (int i = 0; i < samples; i++) {
+    compass.read();
+    float heading = readCompassHeading();
+    
+    Serial.printf("%4d    %6d  %6d  %6d  %7.2f\n",
+                  i + 1,
+                  compass.getX(),
+                  compass.getY(),
+                  compass.getZ(),
+                  heading);
+    
+    delay(100);
+  }
+  
+  Serial.println();
+}

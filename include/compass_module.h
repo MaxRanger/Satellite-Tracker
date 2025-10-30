@@ -54,4 +54,8 @@ void updateBackgroundCalibration();
 // Use this for manual calibration via Serial Monitor
 void calibrateCompass();
 
+// Print compass status to Serial console (for debugging)
+void printCompassStatus();
+void printRawCompassData(int samples);
+
 #endif // COMPASS_MODULE_H

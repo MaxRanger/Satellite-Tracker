@@ -7,7 +7,7 @@
 
 // LED configuration
 #define NUM_LEDS 24
-#define LED_BRIGHTNESS_DEFAULT 128  // 0-255, 50% brightness
+#define LED_BRIGHTNESS_DEFAULT 8  // 0-255, 50% brightness
 
 // PIO configuration
 static PIO led_pio = pio1;  // Use PIO1 (PIO0 used by encoders)
@@ -145,7 +145,7 @@ RGBColor RGB(uint8_t r, uint8_t g, uint8_t b) {
 RGBColor colorRed() { return {255, 0, 0}; }
 RGBColor colorGreen() { return {0, 255, 0}; }
 RGBColor colorBlue() { return {0, 0, 255}; }
-RGBColor colorYellow() { return {255, 192, 0}; }
+RGBColor colorYellow() { return {255, 255, 0}; }
 RGBColor colorPurple() { return {220, 0, 255}; }
 RGBColor colorOff() { return {0, 0, 0}; }
 
@@ -364,12 +364,15 @@ void showLEDs() {
 void testLEDs() {
   Serial.println("\n=== LED Ring Test ===");
   
-  int numLeds = 1;// NUM_LEDS;
+  int numLeds = NUM_LEDS;
+  
+  int brightness  = 255; // Full brightness for test
+  //int brightness  = globalBrightness; // Use current brightness
 
   // Test 1: All red
   Serial.println("Test 1: All LEDs red");
   for (int i = 0; i < numLeds; i++) {
-    ledBuffer[i] = applyBrightness(globalBrightness, 0, 0);
+    ledBuffer[i] = applyBrightness(brightness, 0, 0);
   }
   pushToLEDs();
   delay(1000);
@@ -377,7 +380,7 @@ void testLEDs() {
   // Test 2: All green
   Serial.println("Test 2: All LEDs green");
   for (int i = 0; i < numLeds; i++) {
-    ledBuffer[i] = applyBrightness(0, globalBrightness, 0);
+    ledBuffer[i] = applyBrightness(0, brightness, 0);
   }
   pushToLEDs();
   delay(1000);
@@ -385,7 +388,7 @@ void testLEDs() {
   // Test 3: All blue
   Serial.println("Test 3: All LEDs blue");
   for (int i = 0; i < numLeds; i++) {
-    ledBuffer[i] = applyBrightness(0, 0, globalBrightness);
+    ledBuffer[i] = applyBrightness(0, 0, brightness);
   }
   pushToLEDs();
   delay(1000);
@@ -394,12 +397,20 @@ void testLEDs() {
   Serial.println("Test 4: Chase pattern");
   for (int j = 0; j < numLeds; j++) {
     for (int i = 0; i < numLeds; i++) {
-      ledBuffer[i] = (i == j) ? applyBrightness(globalBrightness, globalBrightness, globalBrightness) : 0;
+      ledBuffer[i] = (i == j) ? applyBrightness(brightness, brightness, brightness) : 0;
     }
     pushToLEDs();
     delay(50);
   }
-  
+  for (int j = 0; j < numLeds; j++) {
+    for (int i = 0; i < numLeds; i++) {
+      ledBuffer[i] = (i == j) ? applyBrightness(brightness, brightness, brightness) : 0;
+    }
+    pushToLEDs();
+    delay(200);
+  }
+
+
   // Test 5: All off
   Serial.println("Test 5: All LEDs off");
   for (int i = 0; i < numLeds; i++) {
@@ -408,4 +419,27 @@ void testLEDs() {
   pushToLEDs();
   
   Serial.println("LED test complete");
+}
+
+void printLedStatus() {
+  Serial.println(F("\n=== LED Ring Status ==="));
+  Serial.print("Brightness: ");
+  Serial.println(getLEDBrightness());
+  Serial.print("Buffer[0]: 0x");
+  uint32_t bufferZero = getLEDBuffer()[0];
+  Serial.println(bufferZero, HEX);
+    Serial.print(F("Current mode: "));
+    Serial.println((int)getLEDMode());
+    Serial.print(F("Mode name: "));
+    switch(getLEDMode()) {
+      case LED_MODE_OFF: Serial.println(F("OFF")); break;
+      case LED_MODE_STEADY_GREEN: Serial.println(F("STEADY_GREEN")); break;
+      case LED_MODE_STEADY_PURPLE: Serial.println(F("STEADY_PURPLE")); break;
+      case LED_MODE_FLASH_RED: Serial.println(F("FLASH_RED")); break;
+      case LED_MODE_FLASH_YELLOW: Serial.println(F("FLASH_YELLOW")); break;
+      case LED_MODE_FLASH_BLUE: Serial.println(F("FLASH_BLUE")); break;
+      case LED_MODE_RAINBOW: Serial.println(F("RAINBOW")); break;
+      default: Serial.println(F("UNKNOWN")); break;
+    }
+    Serial.println();
 }

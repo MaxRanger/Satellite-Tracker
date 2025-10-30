@@ -13,9 +13,9 @@
 struct JoystickData {
   int16_t x;           // Raw X reading (0-4095 for 12-bit ADC)
   int16_t y;           // Raw Y reading
-  float xNormalized;   // Normalized X (-1.0 to +1.0)
-  float yNormalized;   // Normalized Y (-1.0 to +1.0)
-  bool inDeadband;     // True if joystick near center
+  float xNormalized = 0.0f;   // Normalized X (-1.0 to +1.0)
+  float yNormalized = 0.0f;   // Normalized Y (-1.0 to +1.0)
+  bool inDeadband = 0.0f;     // True if joystick near center
 };
 
 // Joystick calibration data
@@ -92,7 +92,8 @@ void setJoystickDeadband(uint16_t percent);
 // Update joystick state (call from main loop)
 void updateJoystick();
 
-// Print joystick state to Serial (for debugging)
-void printJoystickState();
+// Dump current GPS data to Serial (for debugging)
+void printJoystickStatus();
+void printRawJoystickData(int samples);
 
 #endif // JOYSTICK_MODULE_H

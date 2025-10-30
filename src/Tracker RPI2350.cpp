@@ -74,7 +74,7 @@ void setup() {
   initStorage();
   //initMotorControl();
   initCompass();
-  //initGPS();
+  initGPS();
   initJoystick();
   //initButtons();
   initLEDs();
@@ -182,7 +182,7 @@ void loop() {
   //pollButtons();
   
   // Update joystick (NEW - 50 Hz)
-  if (now - lastJoystickUpdate >= 20) {
+  if (now - lastJoystickUpdate >= 200) {
     updateJoystick();
     
     // If joystick manual mode is active, override target position
@@ -223,7 +223,7 @@ void loop() {
   
   // Update GPS (1 Hz)
   if (now - lastGPSUpdate >= 1000) {
-    //updateGPS();
+    updateGPS();
     
     // Update LED mode based on GPS status
     if (trackerState.gpsValid && !isJoystickManualMode()) {

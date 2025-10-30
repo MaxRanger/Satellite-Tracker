@@ -19,4 +19,11 @@ void updateGPS();
 // Get GPS object (for advanced usage)
 TinyGPSPlus& getGPS();
 
+// Dump current GPS data to Serial (for debugging)
+void printGPSStatus();
+void printTLE();
+
+// Run GPS module connection test
+void connectionTest();
+
 #endif // GPS_MODULE_H

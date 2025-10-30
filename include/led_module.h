@@ -65,4 +65,7 @@ RGBColor colorYellow();
 RGBColor colorPurple();
 RGBColor colorOff();
 
+// Print current LED status to Serial console (for debugging)
+void printLedStatus();
+
 #endif // LED_MODULE_H

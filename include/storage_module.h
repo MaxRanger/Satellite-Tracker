@@ -91,4 +91,7 @@ bool loadJoystickCalibration(uint16_t* xMin, uint16_t* xCenter, uint16_t* xMax,
 bool saveTLE(const char* name, const char* line1, const char* line2);
 bool loadTLE(char* name, char* line1, char* line2);
 
+// Print storage status to Serial console (for debugging)
+void printStorageStatus();
+
 #endif // STORAGE_MODULE_H

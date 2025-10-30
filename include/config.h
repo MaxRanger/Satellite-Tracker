@@ -5,6 +5,17 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+
+// ============================================================================
+// Cables and Connectors for prototype model 1
+// ============================================================================
+// Joystick - 5 pin. BLACK=GND, WHITE=VCC, GREY=X[GP26 (ADC0) Pin 32], PURPLE=Y[GP27 (ADC1) Pin 31], BLUE=Button
+// GPS: 5 pin. GREEN=VCC, YELLOW=GND, ORANGE=TX (GP1/Pin2), RED=RX (GP0/Pin1), BROWN=PPS
+// LED: 3 pin. WHITE=GND, WHITE/LONG RED STRIPES=+5v, WHITE/SHORT RED STRIPES=DATA IN (DI) (DO = N/C)
+// Compass: 
+// ===========================================================================
+
+
 // ============================================================================
 // PIN DEFINITIONS
 // ============================================================================
@@ -59,11 +70,14 @@
 #define LED_DATA_PIN       28  // GP28 Pin 34
 
 // Analog Joystick (X/Y only, button used for E-Stop)
-#define JOYSTICK_X_PIN     26  // GP26 (ADC0) Pin 31
-#define JOYSTICK_Y_PIN     27  // GP27 (ADC1) Pin 32
+#define JOYSTICK_Y_PIN     26  // GP26 (ADC0) Pin 31
+#define JOYSTICK_X_PIN     27  // GP27 (ADC1) Pin 32
+#define JOYSTICK_BTN_PIN   99  // unused (E-Stop uses EMERGENCY_STOP_PIN)
 
 // SD Card (SPI, shares bus with display)
 #define SD_CS_PIN          22  // GP22 Pin 29
+
+// PI 31 -> LCD 9 
 
 // NOTE: Magnetometer and touch screen share I2C bus
 // This is OK because they have different I2C addresses:
