@@ -468,3 +468,32 @@ bool loadTLE(char* name, char* line1, char* line2) {
   
   return true;
 }
+
+void printStorageStatus() {
+  Serial.println(F("\n=== STORAGE STATUS ==="));
+  Serial.println();
+  
+  if (!isStorageAvailable()) {
+    Serial.println(F("No storage available"));
+    Serial.println(F("Configuration will not persist across reboots"));
+    Serial.println();
+    return;
+  }
+  
+  StorageType type = getStorageType();
+  Serial.print(F("Type:          "));
+  
+  switch (type) {
+    case STORAGE_TYPE_W25Q_FLASH:
+      Serial.println(F("W25Q SPI Flash"));
+      break;
+    case STORAGE_TYPE_SD_CARD:
+      Serial.println(F("SD Card"));
+      break;
+    default:
+      Serial.println(F("Unknown"));
+      break;
+  }
+  
+  printStorageInfo();
+}

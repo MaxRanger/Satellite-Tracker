@@ -1,5 +1,5 @@
 // ============================================================================
-// serial_interface.cpp - Serial command interface implementation
+// serial_interface.cpp
 // ============================================================================
 
 #include "serial_interface.h"
@@ -136,6 +136,9 @@ static void handleHelpCommand() {
   Serial.println(F("  RAWJOY <n>   - Print n joystick readings"));
   Serial.println(F("  ENCODER      - Print encoder counts"));
   Serial.println(F("  STREAM <sec> - Stream GPS data for n seconds"));
+  Serial.println(F("  LEDTEST      - Run LED ring test sequence"));
+  Serial.println(F("  LEDMODE <n>  - Set LED mode (0-6)"));
+  Serial.println(F("  LEDINFO      - Show LED status"));
   Serial.println();
   
   Serial.println(F("Other:"));
@@ -148,8 +151,19 @@ static void handleStatusCommand() {
   printSystemStatus();
 }
 
-static void handleGPSCommand() {
-  printGPSStatus();
+static void handleGPSCommand(const char* args) {
+  if (args != nullptr && strlen(args) > 0) {
+    unsigned long duration = atoi(args);
+    if (duration == 0) {
+      Serial.println(F("ERROR: Invalid duration for STREAM command"));
+    }
+    connectionTest();
+  } else {
+    printGPSStatus();
+  }
+  
+  
+
 }
 
 static void handleCompassCommand() {
@@ -414,7 +428,7 @@ static void processCommand(const char* input) {
     handleStatusCommand();
   }
   else if (commandMatches(cmd.command, "GPS")) {
-    handleGPSCommand();
+    handleGPSCommand(cmd.args);
   }
   else if (commandMatches(cmd.command, "COMPASS")) {
     handleCompassCommand();
@@ -489,6 +503,7 @@ static void processCommand(const char* input) {
     handleStreamCommand(cmd.args);
   }
   else if (commandMatches(cmd.command, "LEDTEST")) {
+    Serial.println(F("Running LED test..."));
     handleLedTest();
   }
   else if (commandMatches(cmd.command, "LEDMODE")) {
@@ -498,7 +513,7 @@ static void processCommand(const char* input) {
     }
   }
   else if (commandMatches(cmd.command, "LEDINFO")) {
-    handleLedInfo();
+    printLedStatus();
   }
   else {
     Serial.print(F("Unknown command: "));
@@ -514,7 +529,7 @@ static void processCommand(const char* input) {
 void initSerialInterface() {
   Serial.println(F("\n=== Serial Interface Initialized ==="));
   Serial.println(F("Type HELP for available commands"));
-  Serial.println();
+  Serial.print(F("> "));
   
   cmdBufferPos = 0;
   memset(cmdBuffer, 0, sizeof(cmdBuffer));
@@ -579,7 +594,7 @@ void updateSerialInterface() {
 
 void printBanner() {
   Serial.println(F("\n"));
-   Serial.println(F("\n\n"));
+  Serial.println(F("\n\n"));
   Serial.println(F("╔═════════════════════════════════════╗"));
   Serial.println(F("║   RP2350 Satellite Tracker System   ║"));
   Serial.printf (  "║    build: %s - %s    ║\r\n", __DATE__, __TIME__); // Mmm dd yyyy - hh:mm:ss (22 characters)
@@ -649,171 +664,6 @@ void printSystemStatus() {
   Serial.println();
 }
 
-void printGPSStatus() {
-  Serial.println(F("\n=== GPS STATUS ==="));
-  Serial.println();
-  
-  TinyGPSPlus& gps = getGPS();
-  
-  Serial.print(F("Fix Valid:     "));
-  Serial.println(trackerState.gpsValid ? F("YES") : F("NO"));
-  
-  Serial.print(F("Satellites:    "));
-  Serial.println(gps.satellites.isValid() ? gps.satellites.value() : 0);
-  
-  Serial.print(F("HDOP:          "));
-  if (gps.hdop.isValid()) {
-    Serial.println(gps.hdop.hdop());
-  } else {
-    Serial.println(F("N/A"));
-  }
-  
-  if (gps.location.isValid()) {
-    Serial.printf("Latitude:      %.6f°\n", gps.location.lat());
-    Serial.printf("Longitude:     %.6f°\n", gps.location.lng());
-  }
-  
-  if (gps.altitude.isValid()) {
-    Serial.printf("Altitude:      %.1f m\n", gps.altitude.meters());
-  }
-  
-  if (gps.date.isValid() && gps.time.isValid()) {
-    Serial.printf("Date/Time:     %04d-%02d-%02d %02d:%02d:%02d UTC\n",
-                  gps.date.year(), gps.date.month(), gps.date.day(),
-                  gps.time.hour(), gps.time.minute(), gps.time.second());
-  }
-  
-  if (gps.speed.isValid()) {
-    Serial.printf("Speed:         %.2f m/s\n", gps.speed.mps());
-  }
-  
-  if (gps.course.isValid()) {
-    Serial.printf("Course:        %.2f°\n", gps.course.deg());
-  }
-  
-  Serial.printf("\nCharacters:    %lu\n", gps.charsProcessed());
-  Serial.printf("Sentences:     %lu (failed: %lu)\n", 
-                gps.sentencesWithFix(), gps.failedChecksum());
-  
-  Serial.println();
-}
-
-void printCompassStatus() {
-  Serial.println(F("\n=== COMPASS STATUS ==="));
-  Serial.println();
-  
-  QMC5883LCompass& compass = getCompass();
-  compass.read();
-  
-  Serial.print(F("Calibrating:   "));
-  Serial.println(isBackgroundCalibrationActive() ? F("YES") : F("NO"));
-  
-  if (isBackgroundCalibrationActive()) {
-    Serial.printf("Duration:      %lu seconds\n", getCalibrationDuration());
-  }
-  
-  Serial.println();
-  Serial.print(F("Raw Values:"));
-  Serial.printf("\n  X: %d\n", compass.getX());
-  Serial.printf("  Y: %d\n", compass.getY());
-  Serial.printf("  Z: %d\n", compass.getZ());
-  
-  Serial.println();
-  float heading = readCompassHeading();
-  Serial.printf("Heading:       %.2f°\n", heading);
-  
-  // Cardinal direction
-  const char* direction;
-  if (heading < 22.5 || heading >= 337.5) direction = "N";
-  else if (heading < 67.5) direction = "NE";
-  else if (heading < 112.5) direction = "E";
-  else if (heading < 157.5) direction = "SE";
-  else if (heading < 202.5) direction = "S";
-  else if (heading < 247.5) direction = "SW";
-  else if (heading < 292.5) direction = "W";
-  else direction = "NW";
-  
-  Serial.print(F("Direction:     "));
-  Serial.println(direction);
-  
-  Serial.println();
-}
-
-void printJoystickStatus() {
-  Serial.println(F("\n=== JOYSTICK STATUS ==="));
-  Serial.println();
-  
-  JoystickData joy = getJoystickState();
-  JoystickCalibration cal = getJoystickCalibration();
-  
-  Serial.print(F("Manual Mode:   "));
-  Serial.println(isJoystickManualMode() ? F("ACTIVE") : F("INACTIVE"));
-  
-  Serial.print(F("Calibrating:   "));
-  Serial.println(isJoystickCalibrating() ? F("YES") : F("NO"));
-  
-  Serial.print(F("Centered:      "));
-  Serial.println(joy.inDeadband ? F("YES") : F("NO"));
-  
-  Serial.println();
-  Serial.printf("Raw Values:\n");
-  Serial.printf("  X: %d (norm: %.3f)\n", joy.x, joy.xNormalized);
-  Serial.printf("  Y: %d (norm: %.3f)\n", joy.y, joy.yNormalized);
-  //Serial.printf("  Button: %s\n", joy.buttonPressed ? "PRESSED" : "RELEASED");
-  
-  Serial.println();
-  Serial.printf("Calibration:\n");
-  Serial.printf("  X: Min=%d Center=%d Max=%d\n", cal.xMin, cal.xCenter, cal.xMax);
-  Serial.printf("  Y: Min=%d Center=%d Max=%d\n", cal.yMin, cal.yCenter, cal.yMax);
-  Serial.printf("  Deadband: %d%%\n", cal.deadband);
-  
-  Serial.println();
-  Serial.printf("Speed Commands:\n");
-  Serial.printf("  Azimuth:   %.3f\n", getJoystickAzimuthSpeed());
-  Serial.printf("  Elevation: %.3f\n", getJoystickElevationSpeed());
-  
-  Serial.println();
-}
-
-void printMotorStatus() {
-  Serial.println(F("\n=== MOTOR STATUS ==="));
-  Serial.println();
-  
-  float currentEl = motorPos.elevation * DEGREES_PER_PULSE;
-  float currentAz = motorPos.azimuth * DEGREES_PER_PULSE;
-  while (currentAz < 0) currentAz += 360.0;
-  while (currentAz >= 360) currentAz -= 360.0;
-  
-  Serial.printf("Current Position:\n");
-  Serial.printf("  Azimuth:   %.2f° (encoder: %ld)\n", currentAz, motorPos.azimuth);
-  Serial.printf("  Elevation: %.2f° (encoder: %ld)\n", currentEl, motorPos.elevation);
-  
-  Serial.println();
-  Serial.printf("Target Position:\n");
-  Serial.printf("  Azimuth:   %.2f°\n", targetPos.azimuth);
-  Serial.printf("  Elevation: %.2f°\n", targetPos.elevation);
-  Serial.printf("  Valid:     %s\n", targetPos.valid ? "YES" : "NO");
-  
-  Serial.println();
-  Serial.printf("Position Error:\n");
-  float errorAz = targetPos.azimuth - currentAz;
-  if (errorAz > 180) errorAz -= 360;
-  if (errorAz < -180) errorAz += 360;
-  float errorEl = targetPos.elevation - currentEl;
-  Serial.printf("  Azimuth:   %.2f°\n", errorAz);
-  Serial.printf("  Elevation: %.2f°\n", errorEl);
-  
-  Serial.println();
-  Serial.printf("Index Found:\n");
-  Serial.printf("  Azimuth:   %s\n", motorPos.azimuthIndexFound ? "YES" : "NO");
-  Serial.printf("  Elevation: %s\n", motorPos.elevationIndexFound ? "YES" : "NO");
-  
-  Serial.println();
-  Serial.printf("Emergency Stop: %s\n", isEmergencyStop() ? "ACTIVE" : "OK");
-  
-  Serial.println();
-}
-
 void printWiFiStatus() {
   Serial.println(F("\n=== WIFI STATUS ==="));
   Serial.println();
@@ -873,35 +723,6 @@ void printWiFiStatus() {
   }
   
   Serial.println();
-}
-
-void printStorageStatus() {
-  Serial.println(F("\n=== STORAGE STATUS ==="));
-  Serial.println();
-  
-  if (!isStorageAvailable()) {
-    Serial.println(F("No storage available"));
-    Serial.println(F("Configuration will not persist across reboots"));
-    Serial.println();
-    return;
-  }
-  
-  StorageType type = getStorageType();
-  Serial.print(F("Type:          "));
-  
-  switch (type) {
-    case STORAGE_TYPE_W25Q_FLASH:
-      Serial.println(F("W25Q SPI Flash"));
-      break;
-    case STORAGE_TYPE_SD_CARD:
-      Serial.println(F("SD Card"));
-      break;
-    default:
-      Serial.println(F("Unknown"));
-      break;
-  }
-  
-  printStorageInfo();
 }
 
 void setWiFiCredentials(const char* ssid, const char* password) {
@@ -1077,7 +898,7 @@ void beginJoystickCalibration() {
   Serial.println(F("3. Type CALJOYSTOP when done"));
   Serial.println();
   
-  beginJoystickCalibration();
+  startJoystickCalibration();
 }
 
 void endJoystickCalibration() {
@@ -1133,7 +954,7 @@ void beginEmergencyStop() {
 }
 
 void beginResetEmergencyStop() {
-  ::beginResetEmergencyStop(); // Call motor control function
+  ::resetEmergencyStop(); // Call motor control function
 }
 
 void setTLE(const char* name, const char* line1, const char* line2) {
@@ -1152,92 +973,6 @@ void setTLE(const char* name, const char* line1, const char* line2) {
   __dmb(); // Memory barrier
   tleUpdatePending = true;
   trackerState.tleValid = true;
-}
-
-void printTLE() {
-  Serial.println(F("\n=== TLE DATA ==="));
-  Serial.println();
-  
-  if (!trackerState.tleValid) {
-    Serial.println(F("No TLE loaded"));
-    Serial.println();
-    return;
-  }
-  
-  Serial.print(F("Satellite: "));
-  Serial.println(satelliteName);
-  Serial.println(tleLine1);
-  Serial.println(tleLine2);
-  Serial.println();
-}
-
-void printRawCompassData(int samples) {
-  Serial.println(F("\n=== RAW COMPASS DATA ==="));
-  Serial.printf("Collecting %d samples...\n", samples);
-  Serial.println();
-  Serial.println(F("Sample    X       Y       Z     Heading"));
-  Serial.println(F("------  ------  ------  ------  -------"));
-  
-  QMC5883LCompass& compass = getCompass();
-  
-  for (int i = 0; i < samples; i++) {
-    compass.read();
-    float heading = readCompassHeading();
-    
-    Serial.printf("%4d    %6d  %6d  %6d  %7.2f\n",
-                  i + 1,
-                  compass.getX(),
-                  compass.getY(),
-                  compass.getZ(),
-                  heading);
-    
-    delay(100);
-  }
-  
-  Serial.println();
-}
-
-void printRawJoystickData(int samples) {
-  Serial.println(F("\n=== RAW JOYSTICK DATA ==="));
-  Serial.printf("Collecting %d samples...\n", samples);
-  Serial.println();
-  Serial.println(F("Sample    X     Y     X_norm  Y_norm  Button"));
-  Serial.println(F("------  ----  ----   ------  ------  ------"));
-  
-  for (int i = 0; i < samples; i++) {
-    JoystickData joy = readJoystick();
-    
-    Serial.printf("%4d    %4d  %4d   %6.3f  %6.3f   %s\n",
-                  i + 1,
-                  joy.x,
-                  joy.y,
-                  joy.xNormalized,
-                  joy.yNormalized);
-//                  joy.buttonPressed ? "PRESS" : "REL");
-    
-    delay(100);
-  }
-  
-  Serial.println();
-}
-
-void printEncoderCounts() {
-  Serial.println(F("\n=== ENCODER COUNTS ==="));
-  Serial.println();
-  
-  Serial.printf("Azimuth Encoder:   %ld counts (%.2f°)\n",
-                motorPos.azimuth,
-                motorPos.azimuth * DEGREES_PER_PULSE);
-  
-  Serial.printf("Elevation Encoder: %ld counts (%.2f°)\n",
-                motorPos.elevation,
-                motorPos.elevation * DEGREES_PER_PULSE);
-  
-  Serial.println();
-  Serial.printf("Degrees per count: %.6f°\n", DEGREES_PER_PULSE);
-  Serial.printf("Gear ratio:        %.1f:1\n", GEAR_RATIO);
-  Serial.printf("Encoder PPR:       %d\n", ENCODER_PPR);
-  Serial.println();
 }
 
 void streamGPSData(unsigned long duration) {
@@ -1260,18 +995,15 @@ void handleLedTest() {
 
 void handleLedMode(int mode) {
   if (mode > 0 && mode < LED_MODE_CUSTOM) {
-    setLEDMode((LEDMode)mode);
-    Serial.print("LED mode set to: ");
-    Serial.println(mode);
+    if (mode >= 0 && mode <= 6) {
+      setLEDMode((LEDMode)mode);
+      Serial.print(F("LED mode set to: "));
+      Serial.println(mode);
+    } else {
+      Serial.println(F("ERROR: Mode must be 0-6"));
+      Serial.println(F("  0=OFF, 1=GREEN, 2=PURPLE, 3=RED, 4=YELLOW, 5=BLUE, 6=RAINBOW"));
+    }
+  } else {
+    Serial.println(F("ERROR: Usage: LEDMODE <0-6>"));
   }
-}
-
-void handleLedInfo() {
-  Serial.print("Current mode: ");
-  Serial.println((int)getLEDMode());
-  Serial.print("Brightness: ");
-  Serial.println(getLEDBrightness());
-  Serial.print("Buffer[0]: 0x");
-  uint32_t bufferZero = getLEDBuffer()[0];
-  Serial.println(bufferZero, HEX);
 }

@@ -6,9 +6,8 @@
 #include "hardware/clocks.h"
 
 // LED configuration
-
 #define NUM_LEDS 24
-#define LED_BRIGHTNESS_DEFAULT 32  // 0-255, 50% brightness
+#define LED_BRIGHTNESS_DEFAULT 8  // 0-255, 50% brightness
 
 // PIO configuration
 static PIO led_pio = pio1;  // Use PIO1 (PIO0 used by encoders)
@@ -23,74 +22,116 @@ static LEDMode currentMode = LED_MODE_STEADY_GREEN;
 static unsigned long lastUpdate = 0;
 static bool flashState = false;
 static uint16_t animationFrame = 0;
+static float clockDiv = 18.0f;  // gives ~1.2μs per bit
 
 // ============================================================================
 // WS2812 PIO PROGRAM
 // ============================================================================
 
-// PIO program for WS2812 timing
-// Based on Raspberry Pi Pico examples
-static const uint16_t ws2812_program_instructions[] = {
+// Generates proper WS2812 timing: bit 1 = long HIGH, bit 0 = short HIGH
+// This is the standard WS2812 PIO program from Raspberry Pi examples
+const uint16_t ws2812_program_instructions[] = {
     //     .wrap_target
-    0x6221, //  0: out    x, 1            side 0 [2]
-    0x1024, //  1: jmp    !x, 4           side 1 [0]
-    0x1400, //  2: jmp    0               side 1 [4]
-    0xa042, //  3: nop                    side 0 [4]
+    0x6221, //  0: out    x, 1           side 0 [2] ; Side-set still takes place when instruction stalls
+    0x1123, //  1: jmp    !x, 3          side 1 [1] ; Branch on the bit we shifted out. Positive pulse
+    0x1400, //  2: jmp    0              side 1 [4] ; Continue driving high, for a long pulse
+    0xa442, //  3: nop                   side 0 [4] ; Or drive low, for a short pulse
     //     .wrap
 };
 
-static const struct pio_program ws2812_program = {
+const struct pio_program ws2812_program = {
     .instructions = ws2812_program_instructions,
     .length = 4,
     .origin = -1,
 };
+
 
 // PIO helper function to get default config
 static inline pio_sm_config ws2812_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset, offset + 3);
     sm_config_set_sideset(&c, 1, false, false);
+    // CHANGE THIS LINE - add 'true' for inverted output:
+    // sm_config_set_sideset(&c, 1, false, true);  // 1 bit, not optional, INVERTED
+    //                                     ^^^^ this parameter inverts the output
+
     return c;
 }
 
 // Initialize WS2812 PIO
 static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+    // Load program
+    offset = pio_add_program(pio, &ws2812_program);
+    
+    // Configure state machine
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + 0, offset + 3);
+    
+    // Configure sideset - 1 bit, not optional, no pindirs
+    sm_config_set_sideset(&c, 1, false, false);
+    sm_config_set_sideset_pins(&c, pin);
+    
+    // Set clock divider
+    sm_config_set_clkdiv(&c, clockDiv);
+    
+    // Configure shift - shift RIGHT (LSB first), autopull at 24 bits
+    sm_config_set_out_shift(&c, true, true, 24);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+    
+    // Initialize GPIO for PIO use
     pio_gpio_init(pio, pin);
+    
+    // Set pin direction to output
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
     
-    pio_sm_config c = ws2812_program_get_default_config(offset);
-    sm_config_set_sideset_pins(&c, pin);
-    sm_config_set_out_shift(&c, false, true, 24);  // Shift out 24 bits (GRB)
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX); // Use TX FIFO only
-    
-    // Calculate clock divider for 800kHz WS2812 timing
-    float div = (float)clock_get_hz(clk_sys) / (freq * 8.0f);
-    sm_config_set_clkdiv(&c, div);
-    
+    // Initialize and start state machine
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
+    
+    Serial.println("PIO initialized:");
+    Serial.print("  PIO: pio1, SM: ");
+    Serial.println(sm);
+    Serial.print("  Program offset: ");
+    Serial.println(offset);
+    Serial.print("  Clock div: ");
+    Serial.println(clockDiv, 3);
+    Serial.print("  Pin: GPIO");
+    Serial.println(pin);
 }
 
 // ============================================================================
 // LOW-LEVEL LED FUNCTIONS
 // ============================================================================
-
+uint8_t reverse_byte(uint8_t b);
 // Apply gamma correction and brightness
-static uint32_t applyBrightness(uint8_t r, uint8_t g, uint8_t b) {
+static uint32_t applyBrightness(uint32_t r, uint32_t g, uint32_t b) {
   // Apply brightness
   r = (r * globalBrightness) / 255;
   g = (g * globalBrightness) / 255;
   b = (b * globalBrightness) / 255;
-  
-  // WS2812 uses GRB format
-  return (g << 16) | (r << 8) | b;
+
+  g = reverse_byte(g);
+  r = reverse_byte(r);
+  b = reverse_byte(b);
+
+  // WS2812 uses GRB format, but fifo is shifted out LSB first, so we arrange as BGR
+  return (b << 16) | (r << 8) | g;
+}
+
+// Reverse bits in a byte
+uint8_t reverse_byte(uint8_t b) {
+    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+    return b;
 }
 
 // Send data to LEDs via PIO
 static void pushToLEDs() {
   for (int i = 0; i < NUM_LEDS; i++) {
-    pio_sm_put_blocking(led_pio, led_sm, ledBuffer[i]);
+      pio_sm_put_blocking(led_pio, led_sm, ledBuffer[i]);
   }
+  delayMicroseconds(60);  // RES time >50μs}
 }
 
 // ============================================================================
@@ -105,6 +146,7 @@ RGBColor colorRed() { return {255, 0, 0}; }
 RGBColor colorGreen() { return {0, 255, 0}; }
 RGBColor colorBlue() { return {0, 0, 255}; }
 RGBColor colorYellow() { return {255, 255, 0}; }
+RGBColor colorPurple() { return {220, 0, 255}; }
 RGBColor colorOff() { return {0, 0, 0}; }
 
 // ============================================================================
@@ -169,8 +211,7 @@ void animateRainbow() {
 // PUBLIC API IMPLEMENTATION
 // ============================================================================
 
-void initLEDs() {
-  Serial.println("Initializing WS2812 LED ring...");
+void initLEDs() {  Serial.println("Initializing WS2812 LED ring...");
   
   // Check if PIO is available
   Serial.printf("  PIO%d available: ", led_pio == pio0 ? 0 : 1);
@@ -178,31 +219,27 @@ void initLEDs() {
 
   // Load PIO program
   uint offset = pio_add_program(led_pio, &ws2812_program);
+  Serial.print("PIO program loaded at offset: ");
+  Serial.println(offset);
   
   // Initialize PIO for WS2812 (800kHz)
   ws2812_program_init(led_pio, led_sm, offset, LED_DATA_PIN, 800000);
+  Serial.print("PIO initialized on pin: ");
+  Serial.println(LED_DATA_PIN);
   
   // Clear LED buffer
   for (int i = 0; i < NUM_LEDS; i++) {
-    ledBuffer[i] = 0;
+    ledBuffer[i] = 0x0;
   }
-  
-  // Set initial mode
-  currentMode = LED_MODE_STEADY_GREEN;
-  
-  // Push initial state to LEDs
-  // pushToLEDs();
-  // delay(100);
-
-  ledBuffer[0] = applyBrightness(128, 0, 0);
-  Serial.println("Test: Setting first LED to red");
   pushToLEDs();
-  delay(1000);
-  
+  delayMicroseconds(10);
+
   Serial.println("WS2812 LED ring initialized");
   Serial.printf("  LEDs: %d\n", NUM_LEDS);
   Serial.printf("  Data pin: GPIO %d\n", LED_DATA_PIN);
   Serial.printf("  PIO: %d, SM: %d\n", led_pio == pio0 ? 0 : 1, led_sm);
+
+  currentMode = LED_MODE_STEADY_GREEN;  // Initial mode
 }
 
 void setLEDMode(LEDMode mode) {
@@ -327,46 +364,82 @@ void showLEDs() {
 void testLEDs() {
   Serial.println("\n=== LED Ring Test ===");
   
+  int numLeds = NUM_LEDS;
+  
+  int brightness  = 255; // Full brightness for test
+  //int brightness  = globalBrightness; // Use current brightness
+
   // Test 1: All red
   Serial.println("Test 1: All LEDs red");
-  for (int i = 0; i < NUM_LEDS; i++) {
-    ledBuffer[i] = applyBrightness(globalBrightness, 0, 0);
+  for (int i = 0; i < numLeds; i++) {
+    ledBuffer[i] = applyBrightness(brightness, 0, 0);
   }
   pushToLEDs();
   delay(1000);
   
   // Test 2: All green
   Serial.println("Test 2: All LEDs green");
-  for (int i = 0; i < NUM_LEDS; i++) {
-    ledBuffer[i] = applyBrightness(0, globalBrightness, 0);
+  for (int i = 0; i < numLeds; i++) {
+    ledBuffer[i] = applyBrightness(0, brightness, 0);
   }
   pushToLEDs();
   delay(1000);
   
   // Test 3: All blue
   Serial.println("Test 3: All LEDs blue");
-  for (int i = 0; i < NUM_LEDS; i++) {
-    ledBuffer[i] = applyBrightness(0, 0, globalBrightness);
+  for (int i = 0; i < numLeds; i++) {
+    ledBuffer[i] = applyBrightness(0, 0, brightness);
   }
   pushToLEDs();
   delay(1000);
   
   // Test 4: Chase pattern
   Serial.println("Test 4: Chase pattern");
-  for (int j = 0; j < NUM_LEDS; j++) {
-    for (int i = 0; i < NUM_LEDS; i++) {
-      ledBuffer[i] = (i == j) ? applyBrightness(globalBrightness, globalBrightness, globalBrightness) : 0;
+  for (int j = 0; j < numLeds; j++) {
+    for (int i = 0; i < numLeds; i++) {
+      ledBuffer[i] = (i == j) ? applyBrightness(brightness, brightness, brightness) : 0;
     }
     pushToLEDs();
     delay(50);
   }
-  
+  for (int j = 0; j < numLeds; j++) {
+    for (int i = 0; i < numLeds; i++) {
+      ledBuffer[i] = (i == j) ? applyBrightness(brightness, brightness, brightness) : 0;
+    }
+    pushToLEDs();
+    delay(200);
+  }
+
+
   // Test 5: All off
   Serial.println("Test 5: All LEDs off");
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < numLeds; i++) {
     ledBuffer[i] = 0;
   }
   pushToLEDs();
   
   Serial.println("LED test complete");
+}
+
+void printLedStatus() {
+  Serial.println(F("\n=== LED Ring Status ==="));
+  Serial.print("Brightness: ");
+  Serial.println(getLEDBrightness());
+  Serial.print("Buffer[0]: 0x");
+  uint32_t bufferZero = getLEDBuffer()[0];
+  Serial.println(bufferZero, HEX);
+    Serial.print(F("Current mode: "));
+    Serial.println((int)getLEDMode());
+    Serial.print(F("Mode name: "));
+    switch(getLEDMode()) {
+      case LED_MODE_OFF: Serial.println(F("OFF")); break;
+      case LED_MODE_STEADY_GREEN: Serial.println(F("STEADY_GREEN")); break;
+      case LED_MODE_STEADY_PURPLE: Serial.println(F("STEADY_PURPLE")); break;
+      case LED_MODE_FLASH_RED: Serial.println(F("FLASH_RED")); break;
+      case LED_MODE_FLASH_YELLOW: Serial.println(F("FLASH_YELLOW")); break;
+      case LED_MODE_FLASH_BLUE: Serial.println(F("FLASH_BLUE")); break;
+      case LED_MODE_RAINBOW: Serial.println(F("RAINBOW")); break;
+      default: Serial.println(F("UNKNOWN")); break;
+    }
+    Serial.println();
 }

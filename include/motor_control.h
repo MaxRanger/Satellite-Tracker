@@ -43,6 +43,10 @@ void homeAxes();
 void setupPIOEncoders();
 int32_t readPIOEncoder(uint sm);
 
+// Status printing functions to serial console (for debugging)
+void printMotorStatus();
+void printEncoderCounts();
+
 // Interrupt handlers
 void __not_in_flash_func(indexE_ISR)();
 void __not_in_flash_func(indexA_ISR)();

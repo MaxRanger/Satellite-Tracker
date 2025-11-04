@@ -288,3 +288,61 @@ void initMotorControl() {
   Serial.println("Motor control initialized");
   Serial.println("Emergency stop pin configured");
 }
+
+void printMotorStatus() {
+  Serial.println(F("\n=== MOTOR STATUS ==="));
+  Serial.println();
+  
+  float currentEl = motorPos.elevation * DEGREES_PER_PULSE;
+  float currentAz = motorPos.azimuth * DEGREES_PER_PULSE;
+  while (currentAz < 0) currentAz += 360.0;
+  while (currentAz >= 360) currentAz -= 360.0;
+  
+  Serial.printf("Current Position:\n");
+  Serial.printf("  Azimuth:   %.2f° (encoder: %ld)\n", currentAz, motorPos.azimuth);
+  Serial.printf("  Elevation: %.2f° (encoder: %ld)\n", currentEl, motorPos.elevation);
+  
+  Serial.println();
+  Serial.printf("Target Position:\n");
+  Serial.printf("  Azimuth:   %.2f°\n", targetPos.azimuth);
+  Serial.printf("  Elevation: %.2f°\n", targetPos.elevation);
+  Serial.printf("  Valid:     %s\n", targetPos.valid ? "YES" : "NO");
+  
+  Serial.println();
+  Serial.printf("Position Error:\n");
+  float errorAz = targetPos.azimuth - currentAz;
+  if (errorAz > 180) errorAz -= 360;
+  if (errorAz < -180) errorAz += 360;
+  float errorEl = targetPos.elevation - currentEl;
+  Serial.printf("  Azimuth:   %.2f°\n", errorAz);
+  Serial.printf("  Elevation: %.2f°\n", errorEl);
+  
+  Serial.println();
+  Serial.printf("Index Found:\n");
+  Serial.printf("  Azimuth:   %s\n", motorPos.azimuthIndexFound ? "YES" : "NO");
+  Serial.printf("  Elevation: %s\n", motorPos.elevationIndexFound ? "YES" : "NO");
+  
+  Serial.println();
+  Serial.printf("Emergency Stop: %s\n", isEmergencyStop() ? "ACTIVE" : "OK");
+  
+  Serial.println();
+}
+
+void printEncoderCounts() {
+  Serial.println(F("\n=== ENCODER COUNTS ==="));
+  Serial.println();
+  
+  Serial.printf("Azimuth Encoder:   %ld counts (%.2f°)\n",
+                motorPos.azimuth,
+                motorPos.azimuth * DEGREES_PER_PULSE);
+  
+  Serial.printf("Elevation Encoder: %ld counts (%.2f°)\n",
+                motorPos.elevation,
+                motorPos.elevation * DEGREES_PER_PULSE);
+  
+  Serial.println();
+  Serial.printf("Degrees per count: %.6f°\n", DEGREES_PER_PULSE);
+  Serial.printf("Gear ratio:        %.1f:1\n", GEAR_RATIO);
+  Serial.printf("Encoder PPR:       %d\n", ENCODER_PPR);
+  Serial.println();
+}

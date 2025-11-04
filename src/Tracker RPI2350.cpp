@@ -1,6 +1,5 @@
 /*
  * Raspberry Pi Pico 2 (RP2350) Satellite Tracker - Main Program
- * Updated with Serial Interface Module
  */
 
 #include <Arduino.h>
@@ -12,7 +11,7 @@
 #include "display_module.h"
 #include "web_interface.h"
 #include "tracking_logic.h"
-#include "serial_interface.h"  // NEW: Serial command interface
+#include "serial_interface.h"
 #include "joystick_module.h"
 #include "button_module.h"
 #include "led_module.h"
@@ -75,12 +74,12 @@ void setup() {
   initStorage();
   //initMotorControl();
   initCompass();
-  //initGPS();
-  initJoystick();          // NEW: Initialize joystick
-  //initButtons();           // NEW: Initialize hardware buttons
-  initLEDs();              // NEW: Initialize LED ring
+  initGPS();
+  initJoystick();
+  //initButtons();
+  initLEDs();
   initDisplay();
-  initSerialInterface();   // NEW: Initialize serial command interface
+  initSerialInterface();
   
   // Load saved configuration
   if (isStorageAvailable()) {
@@ -165,7 +164,7 @@ void loop() {
   updatePulse();
   
   // Update LED ring (20 Hz)
-  if (now - lastLEDUpdate >= 50) {
+  if (now - lastLEDUpdate >= 150) {
     updateLEDs();
     lastLEDUpdate = now;
   }
@@ -183,7 +182,7 @@ void loop() {
   //pollButtons();
   
   // Update joystick (NEW - 50 Hz)
-  if (now - lastJoystickUpdate >= 20) {
+  if (now - lastJoystickUpdate >= 200) {
     updateJoystick();
     
     // If joystick manual mode is active, override target position
@@ -224,7 +223,7 @@ void loop() {
   
   // Update GPS (1 Hz)
   if (now - lastGPSUpdate >= 1000) {
-    //updateGPS();
+    updateGPS();
     
     // Update LED mode based on GPS status
     if (trackerState.gpsValid && !isJoystickManualMode()) {

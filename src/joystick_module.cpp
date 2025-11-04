@@ -156,7 +156,7 @@ bool isJoystickCentered() {
 float getJoystickAzimuthSpeed() {
   // Only return speed if manual mode is active
   if (!manualModeActive) {
-    return 0.0;
+    return 0.0f;
   }
   
   // X axis controls azimuth
@@ -168,7 +168,7 @@ float getJoystickAzimuthSpeed() {
 float getJoystickElevationSpeed() {
   // Only return speed if manual mode is active
   if (!manualModeActive) {
-    return 0.0;
+    return 0.0f;
   }
   
   // Y axis controls elevation
@@ -323,18 +323,90 @@ void updateJoystick() {
   }
 }
 
-void printJoystickState() {
-  Serial.print("Joystick: ");
-  Serial.print("X=");
-  Serial.print(currentState.x);
-  Serial.print(" (");
-  Serial.print(currentState.xNormalized, 2);
-  Serial.print(") Y=");
-  Serial.print(currentState.y);
-  Serial.print(" (");
-  Serial.print(currentState.yNormalized, 2);
-  Serial.print(") Mode=");
-  Serial.print(manualModeActive ? "MANUAL" : "AUTO");
-  Serial.print(" Deadband=");
-  Serial.println(currentState.inDeadband ? "YES" : "NO");
+void printJoystickStatus() {
+  Serial.println(F("\n=== JOYSTICK STATUS ==="));
+  Serial.println();
+  
+  JoystickData joy = getJoystickState();
+  JoystickCalibration cal = getJoystickCalibration();
+  
+  Serial.print(F("Manual Mode:   "));
+  Serial.println(isJoystickManualMode() ? F("ACTIVE") : F("INACTIVE"));
+  
+  Serial.print(F("Calibrating:   "));
+  Serial.println(isJoystickCalibrating() ? F("YES") : F("NO"));
+  
+  Serial.print(F("Centered:      "));
+  Serial.println(joy.inDeadband ? F("YES") : F("NO"));
+  
+  Serial.println();
+  Serial.println(F("Raw Values:"));
+  
+  // FIX: Use Serial.print() instead of printf for floats
+  Serial.print(F("  X: "));
+  Serial.print(joy.x);
+  Serial.print(F(" (norm: "));
+  Serial.print(joy.xNormalized, 3);
+  Serial.println(F(")"));
+  
+  Serial.print(F("  Y: "));
+  Serial.print(joy.y);
+  Serial.print(F(" (norm: "));
+  Serial.print(joy.yNormalized, 3);
+  Serial.println(F(")"));
+  
+  Serial.println();
+  Serial.println(F("Calibration:"));
+  Serial.print(F("  X: Min="));
+  Serial.print(cal.xMin);
+  Serial.print(F(" Center="));
+  Serial.print(cal.xCenter);
+  Serial.print(F(" Max="));
+  Serial.println(cal.xMax);
+  
+  Serial.print(F("  Y: Min="));
+  Serial.print(cal.yMin);
+  Serial.print(F(" Center="));
+  Serial.print(cal.yCenter);
+  Serial.print(F(" Max="));
+  Serial.println(cal.yMax);
+  
+  Serial.print(F("  Deadband: "));
+  Serial.print(cal.deadband);
+  Serial.println(F("%"));
+  
+  Serial.println();
+  Serial.println(F("Speed Commands:"));
+  
+  Serial.print(F("  Azimuth:   "));
+  Serial.println(getJoystickAzimuthSpeed(), 3);
+  
+  Serial.print(F("  Elevation: "));
+  Serial.println(getJoystickElevationSpeed(), 3);
+  
+  Serial.println();
+}
+
+void printRawJoystickData(int samples) {
+  Serial.println(F("\n=== RAW JOYSTICK DATA ==="));
+  Serial.printf("Collecting %d samples...\n", samples);
+  Serial.println();
+  Serial.println(F("Sample    X     Y     X_norm  Y_norm  Button"));
+  Serial.println(F("------  ----  ----   ------  ------  ------"));
+  
+  for (int i = 0; i < samples; i++) {
+    JoystickData joy = readJoystick();
+    
+    Serial.printf("%4d    %4d  %4d   %6.3f  %6.3f   %s\n",
+                  i + 1,
+                  joy.x,
+                  joy.y,
+                  joy.xNormalized,
+                  joy.yNormalized);
+//                  joy.buttonPressed ? "PRESS" : "REL");
+    
+    delay(100);
+  }
+  
+  Serial.println();
 }

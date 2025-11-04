@@ -57,12 +57,15 @@ void showLEDs(); // Push buffer to LEDs
 void testLEDs(); // Run LED test sequence
 
 // Helper functions for common colors
-RGBColor RGB(uint8_t r, uint8_t g, uint8_t b);
+RGBColor RGB(uint32_t r, uint32_t g, uint32_t b);
 RGBColor colorRed();
 RGBColor colorGreen();
 RGBColor colorBlue();
 RGBColor colorYellow();
 RGBColor colorPurple();
 RGBColor colorOff();
+
+// Print current LED status to Serial console (for debugging)
+void printLedStatus();
 
 #endif // LED_MODULE_H
