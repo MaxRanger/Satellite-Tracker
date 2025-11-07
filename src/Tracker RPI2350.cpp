@@ -72,11 +72,11 @@ void setup() {
   // Initialize subsystems in order
   initSharedData();
   initStorage();
-  //initMotorControl();
+  initMotorControl();
   initCompass();
   initGPS();
   initJoystick();
-  //initButtons();
+  initButtons();
   initLEDs();
   initDisplay();
   initSerialInterface();
@@ -179,7 +179,7 @@ void loop() {
   handleDisplayTouch();
   
   // Poll hardware buttons (NEW)
-  //pollButtons();
+  pollButtons();
   
   // Update joystick (NEW - 50 Hz)
   if (now - lastJoystickUpdate >= 200) {
@@ -241,7 +241,7 @@ void loop() {
   
   // Motor control loop (100 Hz)
   if (now - lastControlUpdate >= TRACKING_UPDATE_MS) {
-    //updateMotorControl();
+    updateMotorControl();
     
     // Update LED for emergency stop
     if (isEmergencyStop()) {

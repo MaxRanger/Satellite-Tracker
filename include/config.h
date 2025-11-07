@@ -12,7 +12,9 @@
 // Joystick - 5 pin. BLACK=GND, WHITE=VCC, GREY=X[GP26 (ADC0) Pin 32], PURPLE=Y[GP27 (ADC1) Pin 31], BLUE=Button
 // GPS: 5 pin. GREEN=VCC, YELLOW=GND, ORANGE=TX (GP1/Pin2), RED=RX (GP0/Pin1), BROWN=PPS
 // LED: 3 pin. WHITE=GND, WHITE/LONG RED STRIPES=+5v, WHITE/SHORT RED STRIPES=DATA IN (DI) (DO = N/C)
-// Compass: 
+// Index: 2x 3-pin. Elevation-Red=VCC / Orange=GND, Pink/White=Signal  Azimuth-Red=VCC / Blue=GND, Yellow=Signal
+// Motor RED=M2, BLACK=GND, YELLOW=C2, GREEN=C1, BLUE=GND, WHITE=M1  1:298 elevation, 1:xx + 1:3 azimuth
+// Compass:
 // ===========================================================================
 
 
@@ -36,7 +38,7 @@
 
 // Index Sensor Pins
 #define INDEX_E            24
-#define INDEX_A            25
+#define INDEX_A            25 
 
 // Emergency Stop Pin (active low with internal pullup)
 #define EMERGENCY_STOP_PIN 23  // GP23 (joystick button)
@@ -100,7 +102,7 @@
 #endif
 
 #ifdef MOTOR_DRIVER_TB6612FNG
-  #define MOTOR_USE_ENABLE_PINS true
+  #define MOTOR_USE_ENABLE_PINS false
   #define MOTOR_ENABLE_ACTIVE_HIGH true
   #define MOTOR_MIN_PWM 0
   #define MOTOR_BRAKE_MODE true

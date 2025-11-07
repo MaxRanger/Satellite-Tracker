@@ -280,8 +280,8 @@ void initMotorControl() {
   attachInterrupt(digitalPinToInterrupt(INDEX_A), indexA_ISR, FALLING);
   
   // Setup emergency stop pin
-  pinMode(EMERGENCY_STOP_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(EMERGENCY_STOP_PIN), emergencyStop_ISR, FALLING);
+  //pinMode(EMERGENCY_STOP_PIN, INPUT_PULLUP);
+  //attachInterrupt(digitalPinToInterrupt(EMERGENCY_STOP_PIN), emergencyStop_ISR, FALLING);
   
   emergencyStop = false;
   
