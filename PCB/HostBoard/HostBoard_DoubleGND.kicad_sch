@@ -2011,7 +2011,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "SSOP*5.3x8.2mm*P0.65mm*"
+			(property "ki_fp_filters" "SSOP-24*5.3x8.2mm*P0.65mm*"
 				(at 0 0 0)
 				(effects
 					(font
@@ -4252,531 +4252,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "TB6612FNG_1"
-			(pin_names
-				(offset 1.016)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "U"
-				(at 11.43 17.78 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Value" "TB6612FNG"
-				(at 11.43 15.24 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" "Package_SO:SSOP-24_5.3x8.2mm_P0.65mm"
-				(at 33.02 -22.86 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "https://toshiba.semicon-storage.com/us/product/linear/motordriver/detail.TB6612FNG.html"
-				(at 11.43 15.24 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Driver IC for Dual DC motor, SSOP-24"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "H-bridge motor driver"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "SSOP*5.3x8.2mm*P0.65mm*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "TB6612FNG_1_0_1"
-				(rectangle
-					(start -10.16 20.32)
-					(end 10.16 -20.32)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-			)
-			(symbol "TB6612FNG_1_1_1"
-				(pin input inverted
-					(at -15.24 10.16 0)
-					(length 5.08)
-					(name "STBY"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "19"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 5.08 0)
-					(length 5.08)
-					(name "PWMA"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "23"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 2.54 0)
-					(length 5.08)
-					(name "PWMB"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "15"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 -2.54 0)
-					(length 5.08)
-					(name "AIN1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "21"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 -5.08 0)
-					(length 5.08)
-					(name "AIN2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "22"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 -7.62 0)
-					(length 5.08)
-					(name "BIN1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "17"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -15.24 -10.16 0)
-					(length 5.08)
-					(name "BIN2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "16"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -7.62 25.4 270)
-					(length 5.08)
-					(name "VCC"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "20"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -7.62 -25.4 90)
-					(length 5.08)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "18"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 2.54 25.4 270)
-					(length 5.08)
-					(name "VM1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "24"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 2.54 -25.4 90)
-					(length 5.08)
-					(name "PGND1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 2.54 -25.4 90)
-					(length 5.08)
-					(hide yes)
-					(name "PGND1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 5.08 25.4 270)
-					(length 5.08)
-					(name "VM2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 7.62 25.4 270)
-					(length 5.08)
-					(name "VM3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 7.62 -25.4 90)
-					(length 5.08)
-					(hide yes)
-					(name "PGND2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 7.62 -25.4 90)
-					(length 5.08)
-					(name "PGND2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 15.24 10.16 180)
-					(length 5.08)
-					(name "AO1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 15.24 10.16 180)
-					(length 5.08)
-					(hide yes)
-					(name "AO1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 15.24 5.08 180)
-					(length 5.08)
-					(name "AO2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 15.24 5.08 180)
-					(length 5.08)
-					(hide yes)
-					(name "AO2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 15.24 -2.54 180)
-					(length 5.08)
-					(name "BO1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 15.24 -2.54 180)
-					(length 5.08)
-					(hide yes)
-					(name "BO1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 15.24 -7.62 180)
-					(length 5.08)
-					(name "BO2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 15.24 -7.62 180)
-					(length 5.08)
-					(hide yes)
-					(name "BO2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "power:+3.3V"
 			(power)
 			(pin_numbers
@@ -5722,16 +5197,6 @@
 	)
 	(wire
 		(pts
-			(xy 264.16 33.02) (xy 262.89 33.02)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "182bb56d-9f85-4d56-82fd-cdb4b513c58f")
-	)
-	(wire
-		(pts
 			(xy 96.52 43.18) (xy 96.52 81.28)
 		)
 		(stroke
@@ -6122,6 +5587,16 @@
 	)
 	(wire
 		(pts
+			(xy 262.89 133.35) (xy 245.11 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3d9ca2d4-5347-4f4f-924e-fd9405a34878")
+	)
+	(wire
+		(pts
 			(xy 36.83 156.21) (xy 45.72 156.21)
 		)
 		(stroke
@@ -6462,16 +5937,6 @@
 	)
 	(wire
 		(pts
-			(xy 245.11 133.35) (xy 262.89 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5df21027-2458-4435-be5c-5921a05f07b4")
-	)
-	(wire
-		(pts
 			(xy 157.48 30.48) (xy 184.15 30.48)
 		)
 		(stroke
@@ -6559,6 +6024,16 @@
 			(type default)
 		)
 		(uuid "667629f9-39ad-415a-a597-ab891ed92d07")
+	)
+	(wire
+		(pts
+			(xy 262.89 33.02) (xy 264.16 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "66ac6a65-e7bb-497a-86e9-e365518cafe1")
 	)
 	(wire
 		(pts
@@ -8290,16 +7765,6 @@
 		)
 		(uuid "ff8c1808-445d-4047-817c-21b07f5c1f51")
 	)
-	(label "COMPASS_FWD"
-		(at 246.38 100.33 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "01e7ba5e-54de-4740-9a1e-ea8c572d4dc5")
-	)
 	(label "AZIMUTH_IDX"
 		(at 133.35 106.68 180)
 		(effects
@@ -8310,6 +7775,26 @@
 		)
 		(uuid "06cc80d0-17a8-40d0-981d-58327989d1bc")
 	)
+	(label "LED"
+		(at 180.34 106.68 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "085d1547-f10c-498e-91a7-b42bad1eed8f")
+	)
+	(label "JOY_SW"
+		(at 245.11 133.35 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "08856a8e-8a4e-4ca7-bac8-9f0d9e5be05d")
+	)
 	(label "EXP_INT_A"
 		(at 181.61 88.9 0)
 		(effects
@@ -8319,6 +7804,26 @@
 			(justify left bottom)
 		)
 		(uuid "0d9b4187-f10f-4b8f-ad5f-d97860f1211f")
+	)
+	(label "LED"
+		(at 182.88 38.1 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0f7e94e5-4b38-443b-9b54-4a87e90e6224")
+	)
+	(label "JOY_Y"
+		(at 264.16 25.4 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "23bf41e2-3d4a-4246-a41d-92008ee2b698")
 	)
 	(label "JOY_X"
 		(at 180.34 104.14 0)
@@ -8341,14 +7846,14 @@
 		(uuid "297aae8a-6efb-4b32-8972-e4c697cbaf0a")
 	)
 	(label "JOY_SW"
-		(at 180.34 106.68 0)
+		(at 262.89 33.02 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify right bottom)
 		)
-		(uuid "3178222f-4b8e-400d-bc37-5fd3c7c3f116")
+		(uuid "30014ed3-8578-4125-bd16-3aaf4051889f")
 	)
 	(label "TFT_CS"
 		(at 181.61 78.74 0)
@@ -8380,16 +7885,6 @@
 		)
 		(uuid "3e77d78f-49f3-43ca-b3fa-072c78e9ac19")
 	)
-	(label "JOYSTICK_A"
-		(at 246.38 123.19 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "51a4df6b-9092-47c4-a85c-1fd9c714ece6")
-	)
 	(label "TFT_MISO"
 		(at 181.61 76.2 0)
 		(effects
@@ -8400,16 +7895,6 @@
 		)
 		(uuid "528107af-59ac-4b58-827a-7390f4612eeb")
 	)
-	(label "AUX_B"
-		(at 246.38 107.95 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "54f534ab-bc9c-42b9-8baa-e4a069223f68")
-	)
 	(label "AZIMUTH_CHA"
 		(at 133.35 99.06 180)
 		(effects
@@ -8419,16 +7904,6 @@
 			(justify right bottom)
 		)
 		(uuid "58f8c3d0-8301-41ff-90af-c882d2f3e74d")
-	)
-	(label "JOYSTICK_B"
-		(at 246.38 125.73 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "715a4ac9-e371-4d8c-821d-d1554a62b56a")
 	)
 	(label "ELEVATION_IDX"
 		(at 133.35 104.14 180)
@@ -8459,6 +7934,16 @@
 			(justify right bottom)
 		)
 		(uuid "83236236-2886-4d37-b229-8d809ee9b6b7")
+	)
+	(label "JOY_X"
+		(at 264.16 27.94 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "88841528-ca42-42bd-98b4-90a05abc70d7")
 	)
 	(label "AZIMUTH_FWD"
 		(at 133.35 93.98 180)
@@ -8500,16 +7985,6 @@
 		)
 		(uuid "9dd1d21c-f464-445b-92f9-0a8b90b2c657")
 	)
-	(label "AUX_A"
-		(at 246.38 105.41 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "aade09e7-d906-4c83-9b66-512247c0747f")
-	)
 	(label "ELEVATION_CHA"
 		(at 133.35 78.74 180)
 		(effects
@@ -8550,16 +8025,6 @@
 		)
 		(uuid "bd10e683-409a-420e-b8de-01999859d67a")
 	)
-	(label "JOYSTICK_C"
-		(at 246.38 128.27 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "dc389495-5ec3-460b-aa88-157fb424a9df")
-	)
 	(label "TFT_SCK"
 		(at 181.61 81.28 0)
 		(effects
@@ -8569,36 +8034,6 @@
 			(justify left bottom)
 		)
 		(uuid "e28c717c-60bb-469f-a664-dfc9f6470d45")
-	)
-	(label "JOYSTICK_BTN"
-		(at 246.38 133.35 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "e642af3c-6c18-4f4a-b28f-2a5d7f31f7a5")
-	)
-	(label "JOYSTICK_D"
-		(at 246.38 130.81 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "e7e60797-2d0a-4672-80aa-4b44ae1460dd")
-	)
-	(label "COMPASS_REV"
-		(at 246.38 102.87 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "fe1e7ccb-f678-4695-ad28-e8d075f15511")
 	)
 	(global_label "Vmotor"
 		(shape input)
@@ -8997,7 +8432,6 @@
 		)
 	)
 	(symbol
-		(lib_name "TB6612FNG_1")
 		(lib_id "Driver_Motor:TB6612FNG")
 		(at 93.98 156.21 0)
 		(mirror y)

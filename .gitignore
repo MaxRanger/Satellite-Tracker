@@ -4,4 +4,6 @@
 .vscode/launch.json
 .vscode/ipch
 PCB/HostBoard/fp-info-cache
-PCB/HostBoard/*
+PCB/HostBoard/HostBoard_DoubleGND-backups
+PCB/HostBoard/HostBoard-backups
+/PCB/HostBoard/*.kicad_sch-bak
